@@ -1,0 +1,30 @@
+{
+  "browser": {
+    "browserName": "chromium",
+    "launchOptions": {
+      "channel": "chrome",
+      "headless": false,
+      "timeout": 60000
+    },
+    "contextOptions": {
+      "viewport": { "width": 1280, "height": 720 },
+      "timeout": 60000,
+      "navigationTimeout": 12000
+    }
+  },
+  "capabilities": [
+    "core",
+    "tabs",
+    "pdf",
+    "history",
+    "wait",
+    "files",
+    "install"
+  ],
+  "outputDir": "/tmp",
+  "tools": {
+    "browser_take_screenshot": {
+      "omitBase64": false
+    }
+  }
+}

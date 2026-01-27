@@ -1,0 +1,23 @@
+{
+  "name": "playwright-e2e",
+  "version": "1.0.0",
+  "description": "Amr salem case study : QA World e2e test",
+  "scripts": {
+    "test": "npx playwright test --config=playwright.config.ts",
+    "UI": "npx playwright codegen",
+    "report": "npx playwright show-report"
+  },
+  "keywords": [
+    "playwright",
+    "automation"
+  ],
+  "author": "Amrsa",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.57.0"
+  },
+  "dependencies": {
+    "openai": "^6.16.0",
+    "zod": "^4.3.5"
+  }
+}
