@@ -52,9 +52,20 @@
 
                     <div class="step-block">
                         <h4><span class="step-num">02</span> Configuration</h4>
-                        <p>Set your OpenAI API key and enable healing in your environment.</p>
+                        <p>Set your API key and choose your provider (default is OpenAI).</p>
                         <div class="code-preview">
-                            <pre><code class="language-bash">export AI_API_KEY="your-openai-key"
+                            <pre><code class="language-bash"><span class="comment"># OpenAI (or AI_PROVIDER="gpt")</span>
+export AI_API_KEY="your-openai-key"
+export SELF_HEAL=1
+
+<span class="comment"># Anthropic (or AI_PROVIDER="claude")</span>
+export AI_PROVIDER="anthropic"
+export AI_API_KEY="your-anthropic-key"
+export SELF_HEAL=1
+
+<span class="comment"># Google (or AI_PROVIDER="gemini")</span>
+export AI_PROVIDER="google"
+export AI_API_KEY="your-google-key"
 export SELF_HEAL=1</code></pre>
                         </div>
                     </div>
@@ -106,8 +117,12 @@ export SELF_HEAL=1</code></pre>
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td><code>heal.click(locator, desc)</code></td>
-                                        <td>Click an element</td>
+                                        <td><code>heal.locator(selector, desc)</code></td>
+                                        <td>Chainable self-healing locator</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>heal.click(loc, desc, {force?})</code></td>
+                                        <td>Click (force: true for hidden)</td>
                                     </tr>
                                     <tr>
                                         <td><code>heal.fill(locator, desc, value)</code></td>

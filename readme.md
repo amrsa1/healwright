@@ -33,7 +33,18 @@ npm install healwright
 Set your API key and enable healing:
 
 ```bash
+# OpenAI (default) - also accepts AI_PROVIDER=gpt
 export AI_API_KEY="your-openai-key"
+export SELF_HEAL=1
+
+# Anthropic Claude - also accepts AI_PROVIDER=claude
+export AI_PROVIDER=anthropic
+export AI_API_KEY="your-anthropic-key"
+export SELF_HEAL=1
+
+# Google Gemini - also accepts AI_PROVIDER=gemini  
+export AI_PROVIDER=google
+export AI_API_KEY="your-google-key"
 export SELF_HEAL=1
 ```
 
@@ -97,13 +108,25 @@ All methods take a locator (or empty string for AI-only) and a description:
 
 | Method | What it does |
 |--------|-------------|
-| `heal.click(locator, desc)` | Click an element |
+| `heal.click(locator, desc, options?)` | Click an element |
 | `heal.fill(locator, desc, value)` | Fill an input |
 | `heal.selectOption(locator, desc, value)` | Select from dropdown |
 | `heal.check(locator, desc)` | Check a checkbox |
 | `heal.dblclick(locator, desc)` | Double-click |
 | `heal.hover(locator, desc)` | Hover over element |
 | `heal.focus(locator, desc)` | Focus element |
+| `heal.locator(selector, desc)` | Create self-healing locator for chaining |
+
+### Self-Healing Locator
+
+Create a locator that combines a CSS selector with a semantic description. If the selector fails, AI takes over:
+
+```typescript
+// Combines selector with semantic fallback - best of both worlds
+await page.heal.locator('.new-todo', 'Input field for new todos').fill('Buy milk');
+await page.heal.locator('.submit-btn', 'Submit button').click();
+await page.heal.locator('.toggle', 'Checkbox').check();
+```
 
 ### AI-Only Mode
 
@@ -115,6 +138,18 @@ await page.heal.fill('', 'Search input', 'my query');
 ```
 
 This is useful when you don't have good selectors or want to make tests more readable.
+
+### Force Click (Hidden Elements)
+
+Some elements only appear on hover (like delete buttons). Use `{ force: true }` to click hidden elements:
+
+```typescript
+// First hover to reveal the element
+await page.heal.hover('', 'Todo item in the list');
+
+// Then force-click the hidden delete button
+await page.heal.click('', 'Delete button', { force: true });
+```
 
 ### Mixing Healing with Regular Playwright
 
@@ -138,7 +173,14 @@ Pick the approach that makes sense for each action. Maybe you use healing for th
 | Variable | Description |
 |----------|-------------|
 | `SELF_HEAL` | Set to `1` to enable healing |
-| `AI_API_KEY` | Your OpenAI API key |
+| `AI_API_KEY` | Your AI provider API key |
+| `AI_PROVIDER` | `openai`/`gpt`, `anthropic`/`claude`, or `google`/`gemini` |
+| `AI_MODEL` | Override the default model (optional) |
+
+**Default models by provider:**
+- **OpenAI:** `gpt-4o-mini`
+- **Anthropic:** `claude-sonnet-4-20250514`
+- **Google:** `gemini-2.5-flash`
 
 ### Cache
 
