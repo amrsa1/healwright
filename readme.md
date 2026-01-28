@@ -1,97 +1,182 @@
-# AI Self-Healing (Playwright)
+# healwright
 
-This project includes an **AI-assisted self-healing layer** for Playwright tests.
-It is designed to automatically (a) review failures and (b) optionally propose + apply locator fixes on the fly using a retry strategy.
+AI-powered self-healing locators for Playwright. When your selectors break, healwright figures out what you meant and finds the element anyway.
 
-Key idea: **Playwright can’t change a failed test result after the fact**, so ‘healing’ is implemented by writing a healed locator mapping and letting **Playwright retry** the test. If the retry passes, the overall run becomes green.
+[![npm version](https://badge.fury.io/js/healwright.svg)](https://www.npmjs.com/package/healwright)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Components (Infra)
+## Why?
 
-These are the core files involved:
+We've all been there. You write a solid test suite, everything passes, then the frontend team refactors something and half your locators break. You spend hours updating selectors instead of writing actual tests.
 
-- `src/utils/fixture.ts`: Auto-runs the self-healing pipeline after each test.
-- `src/utils/aiSelfHealing.ts`: Calls OpenAI **Responses API** to generate a failure review and (optionally) a healed selector suggestion.
-- `src/utils/selfHealingLocator.ts`: Stores and resolves selector mappings from `.self-heal/locator-map.json`.
-- `configlist.ts`: Enables Playwright retries when `AI_SELF_HEAL=true`.
-- Page objects (e.g. `src/pages/feedbackPage.ts`): Route CSS selectors through `resolveSelector(...)` so healed selectors are used automatically on retry.
+Healwright fixes this. It wraps your Playwright page with AI-powered healing that kicks in when locators fail. You can also skip selectors entirely and just describe what you're looking for in plain English.
 
-Artifacts:
-- `.self-heal/locator-map.json`: The persistent mapping `{ originalSelector: healedSelector }`.
-- `test-results/ai-logs/`: AI analysis logs for audit + debugging.
+## Features
 
-## Configuration (Environment Variables)
+- **Self-healing locators** - When a selector breaks, AI analyzes the page and finds the right element
+- **AI-only mode** - Just describe the element, no selector needed
+- **Caching** - Healed selectors are saved so you don't burn API calls on every run
+- **Drop-in** - Works with your existing Playwright setup
 
-Set these in your `.env`:
-
-```dotenv
-# Enable/disable auto-heal + retry behavior
-AI_SELF_HEAL=true
-
-# Provider tracking (logged in ai-logs)
-AI_PROVIDER=openai
-
-# OpenAI model name (logged in ai-logs)
-AI_MODEL=gpt-4o-mini
-
-# OpenAI API key
-AI_API_KEY=YOUR_KEY_HERE
-```
-
-Notes:
-- `AI_PROVIDER` is logged for audit, and currently only supports `openai`.
-- If `AI_SELF_HEAL` is not `true`, you still get **failure review logs**, but no retry-based healing is attempted.
-- The script redacts common tokens/keys before sending content to the model and before writing logs.
-
-## Runtime Flow (Process)
-
-### Level 1 — Failure Review (Always)
-1. A test runs normally.
-2. If the test fails, the auto fixture captures:
-   - failure message (`testInfo.error?.message`)
-   - page HTML (`page.content()`)
-3. The AI is called through `responses.create(...)`.
-4. The AI output is written to `test-results/ai-logs/` including:
-   - Provider, Model, ResponseId
-   - Test title, error message
-   - Suggested locator fix guidance
-
-### Level 2 — Self-Heal via Retry (Only when `AI_SELF_HEAL=true`)
-1. On the first failure attempt only (`testInfo.retry === 0`):
-   - Extract an original selector from the Playwright error text if possible (example: `locator('#headerTitle')`).
-   - Ask AI for a `healedSelector` suggestion (JSON output).
-   - Validate the suggested selector using `page.locator(healed).count() > 0`.
-   - If valid, store the mapping in `.self-heal/locator-map.json`.
-2. Playwright re-runs the same test automatically (retry = 1).
-3. Page Objects resolve selectors via `resolveSelector(original)` and use the healed selector.
-4. If the retry passes, the overall run is green.
-
-Important: this approach does not mutate test status after failure; it relies on Playwright retry semantics.
-
-## How to Run
-
-Run tests normally:
+## Installation
 
 ```bash
-npm run test
+npm install healwright
 ```
 
-Expected outputs:
-- AI review logs: `test-results/ai-logs/ai_healing_<provider>_<model>_<test>_<timestamp>.log`
-- Healed locator map: `.self-heal/locator-map.json` (only when a healed selector is produced and validated)
+## Quick Start
 
-To disable healing (but keep review logs), set:
+Set your API key and enable healing:
 
-```dotenv
-AI_SELF_HEAL=false
+```bash
+export AI_API_KEY="your-openai-key"
+export SELF_HEAL=1
 ```
 
-## Limitations + Next Steps
+Create a fixture:
 
-Current healing scope:
-- The auto-heal mapping currently targets **CSS selectors used via `page.locator('...')`**.
-- `getByRole(...)` and other role-based locators are not auto-remapped yet.
+```typescript
+// fixtures.ts
+import { test as base } from '@playwright/test';
+import { createHealingFixture, HealPage } from 'healwright';
 
-Recommended improvements:
-- Extend healing to store a ‘locator spec’ (e.g. `{ type: 'role', role: 'button', name: 'Logout' }`) for `getByRole` healing.
-- Add more failure context to the prompt (URL, project name, screenshot text).
-- Optional approval workflow before persisting healed mappings (for stricter control).
+export const test = base.extend<{ page: HealPage }>(createHealingFixture());
+export { expect } from '@playwright/test';
+```
+
+Use it in your tests:
+
+```typescript
+import { test, expect } from './fixtures';
+
+test('login flow', async ({ page }) => {
+  await page.goto('https://example.com');
+  
+  // If this selector breaks, AI will find the right element
+  await page.heal.click(
+    page.locator('[data-testid="submit-btn"]'),
+    'Submit button on form'
+  );
+  
+  // Or skip the selector entirely - just describe what you want
+  await page.heal.fill('', 'Email input field', 'user@example.com');
+});
+```
+
+## API
+
+### `withHealing(page)`
+
+Wraps a Playwright page with healing methods:
+
+```typescript
+import { withHealing } from 'healwright';
+
+const healPage = withHealing(page);
+await healPage.heal.click(locator, 'Button description');
+```
+
+### `createHealingFixture()`
+
+Creates a test fixture that automatically wraps the page:
+
+```typescript
+import { test as base } from '@playwright/test';
+import { createHealingFixture, HealPage } from 'healwright';
+
+export const test = base.extend<{ page: HealPage }>(createHealingFixture());
+```
+
+### Available Methods
+
+All methods take a locator (or empty string for AI-only) and a description:
+
+| Method | What it does |
+|--------|-------------|
+| `heal.click(locator, desc)` | Click an element |
+| `heal.fill(locator, desc, value)` | Fill an input |
+| `heal.selectOption(locator, desc, value)` | Select from dropdown |
+| `heal.check(locator, desc)` | Check a checkbox |
+| `heal.dblclick(locator, desc)` | Double-click |
+| `heal.hover(locator, desc)` | Hover over element |
+| `heal.focus(locator, desc)` | Focus element |
+
+### AI-Only Mode
+
+Pass an empty string as the locator and let AI find the element:
+
+```typescript
+await page.heal.click('', 'Login button');
+await page.heal.fill('', 'Search input', 'my query');
+```
+
+This is useful when you don't have good selectors or want to make tests more readable.
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `SELF_HEAL` | Set to `1` to enable healing |
+| `AI_API_KEY` | Your OpenAI API key |
+
+### Cache
+
+Healed selectors get cached in `.self-heal/`. Add it to your `.gitignore`:
+
+```
+.self-heal/
+```
+
+## How It Works
+
+1. Try the original locator
+2. If it fails, check the cache for a previously healed selector
+3. If not cached, send page context to the AI and ask it to find the element
+4. Cache the result for next time
+
+## Example
+
+```typescript
+import { test as base, expect } from '@playwright/test';
+import { createHealingFixture, HealPage } from 'healwright';
+
+const test = base.extend<{ page: HealPage }>(createHealingFixture());
+
+test('checkout flow', async ({ page }) => {
+  await page.goto('/shop');
+  
+  // These might break when the UI changes, but healwright will adapt
+  await page.heal.click(
+    page.locator('[data-testid="add-to-cart"]'),
+    'Add to cart button'
+  );
+  
+  await page.heal.click(
+    page.locator('.cart-icon'),
+    'Shopping cart icon'
+  );
+  
+  await page.heal.fill(
+    page.locator('#email'),
+    'Email field in checkout',
+    'customer@example.com'
+  );
+  
+  // No selector at all - just describe it
+  await page.heal.click('', 'Place order button');
+});
+```
+
+## Development
+
+```bash
+npm install
+npm run build
+SELF_HEAL=1 npm test
+```
+
+## License
+
+MIT

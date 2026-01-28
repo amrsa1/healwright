@@ -1,23 +1,69 @@
 {
-  "name": "playwright-e2e",
+  "name": "healwright",
   "version": "1.0.0",
-  "description": "Amr salem case study : QA World e2e test",
+  "description": "AI-powered self-healing locators for Playwright. When locators fail, AI automatically finds the correct element.",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "test": "npx playwright test --config=playwright.config.ts",
-    "UI": "npx playwright codegen",
-    "report": "npx playwright show-report"
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "test": "SELF_HEAL=1 npx playwright test",
+    "test:headed": "SELF_HEAL=1 npx playwright test --headed",
+    "lint": "eslint src/",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "playwright",
-    "automation"
+    "testing",
+    "automation",
+    "self-healing",
+    "ai",
+    "locators",
+    "e2e",
+    "end-to-end",
+    "web-testing",
+    "resilient-tests",
+    "gpt",
+    "openai"
   ],
-  "author": "Amrsa",
-  "license": "ISC",
-  "devDependencies": {
-    "@playwright/test": "^1.57.0"
+  "author": "Amr Salem",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/user/healwright"
+  },
+  "bugs": {
+    "url": "https://github.com/user/healwright/issues"
+  },
+  "homepage": "https://github.com/user/healwright#readme",
+  "peerDependencies": {
+    "@playwright/test": ">=1.40.0"
   },
   "dependencies": {
     "openai": "^6.16.0",
-    "zod": "^4.3.5"
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.0",
+    "@types/node": "^25.0.10",
+    "dotenv": "^17.2.3",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
