@@ -1,11 +1,12 @@
 import { test as base } from "@playwright/test";
-import FeedbackPage from "../pages/feedbackPage";
+import FeedbackPage from "../pages/feedbackPageNew";
 import DataProvider from "./dataProvider";
 import LoginPage from "../pages/loginPage";
 import API from "./apiUtils";
-import { heal } from "./heal";
+import { withHealing, HealPage } from "./healPage";
 
 type MyFixtures = {
+  page: HealPage;
   feedbackPage: FeedbackPage;
   dataProvider: DataProvider;
   api: API;
@@ -13,15 +14,17 @@ type MyFixtures = {
 };
 
 const fixtures = base.extend<MyFixtures>({
-  feedbackPage: async ({ page }, use, testInfo) => {
-    // Set test name for self-healing cache metadata
-    heal.setTestName(testInfo.title);
+  // Override page with healing capabilities
+  page: async ({ page }, use, testInfo) => {
+    const healPage = withHealing(page);
+    healPage.heal.setTestName(testInfo.title);
+    await use(healPage);
+  },
+  feedbackPage: async ({ page }, use) => {
     const feedbackPage = new FeedbackPage(page);
     await use(feedbackPage);
   },
-  loginPage: async ({ page }, use, testInfo) => {
-    // Set test name for self-healing cache metadata
-    heal.setTestName(testInfo.title);
+  loginPage: async ({ page }, use) => {
     await page.evaluate(() => window.localStorage.clear());
     await page.evaluate(() => window.sessionStorage.clear());
     const loginPage = new LoginPage(page);
