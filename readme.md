@@ -1,9 +1,13 @@
-# healwright
+<div align="center">
+  <img src="./healw_icon.png" alt="Healwright Logo" width="300"/>
+  
+  # healwright
 
-AI-powered self-healing locators for Playwright. When your selectors break, healwright figures out what you meant and finds the element anyway.
+  AI-powered self-healing locators for Playwright. When your selectors break, healwright figures out what you meant and finds the element anyway.
 
-[![npm version](https://badge.fury.io/js/healwright.svg)](https://www.npmjs.com/package/healwright)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+  [![npm version](https://badge.fury.io/js/healwright.svg)](https://www.npmjs.com/package/healwright)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+</div>
 
 ## Why?
 
@@ -111,6 +115,21 @@ await page.heal.fill('', 'Search input', 'my query');
 ```
 
 This is useful when you don't have good selectors or want to make tests more readable.
+
+### Mixing Healing with Regular Playwright
+
+Just because you've added healwright doesn't mean you have to use `page.heal.*` for everything. The wrapped page still works exactly like a normal Playwright page, so you can mix and match as needed:
+
+```typescript
+// Use healing for elements that tend to break
+await page.heal.fill('', 'Input field for new todo items', 'Buy groceries');
+
+// Use regular Playwright for stable selectors
+await page.fill('#username', 'testuser');
+await page.click('button[type="submit"]');
+```
+
+Pick the approach that makes sense for each action. Maybe you use healing for that flaky third-party widget but stick with regular locators for your own well-structured components. It's your call.
 
 ## Configuration
 
