@@ -47,12 +47,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/user/healwright"
+    "url": "https://github.com/amrsa1/healwright"
   },
   "bugs": {
-    "url": "https://github.com/user/healwright/issues"
+    "url": "https://github.com/amrsa1/healwright/issues"
   },
-  "homepage": "https://github.com/user/healwright#readme",
+  "homepage": "https://github.com/amrsa1/healwright#readme",
   "peerDependencies": {
     "@playwright/test": ">=1.40.0"
   },
