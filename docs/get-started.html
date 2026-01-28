@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Started | Healwright</title>
+    <meta name="description" content="Get started with Healwright - AI-powered self-healing locators for Playwright.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+
+    <nav class="navbar">
+        <div class="container nav-content">
+            <a href="index.html" class="logo" style="text-decoration: none;">
+                <img src="./owl.png" alt="Healwright Icon" class="nav-logo-img">
+                <span class="brand-text">Healwright</span>
+            </a>
+            <div class="nav-links">
+                <a href="index.html#features">Features</a>
+                <a href="index.html#how-it-works">How it Works</a>
+                <a href="https://github.com/amr-salem/healwright" class="btn btn-secondary"><i data-lucide="github"></i>
+                    GitHub</a>
+                <a href="get-started.html" class="btn btn-primary">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <main style="padding-top: 120px; padding-bottom: 60px;">
+        <section class="get-started">
+            <div class="container">
+                <h2 class="section-title">Get <span class="gradient-text">Started</span></h2>
+                <div class="code-steps">
+                    <div class="step-block">
+                        <h4><span class="step-num">01</span> Installation</h4>
+                        <div class="command-block">
+                            <span class="prompt">$</span> npm install healwright
+                            <button class="copy-btn" onclick="navigator.clipboard.writeText('npm install healwright')">
+                                <i data-lucide="copy"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="step-block">
+                        <h4><span class="step-num">02</span> Configuration</h4>
+                        <p>Set your OpenAI API key and enable healing in your environment.</p>
+                        <div class="code-preview">
+                            <pre><code class="language-bash">export AI_API_KEY="your-openai-key"
+export SELF_HEAL=1</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="step-block">
+                        <h4><span class="step-num">03</span> Setup Fixture</h4>
+                        <p>Create a fixture to wrap your Playwright page.</p>
+                        <div class="code-preview">
+                            <pre><code class="language-typescript"><span class="comment">// fixtures.ts</span>
+<span class="keyword">import</span> { test as base } from <span class="string">'@playwright/test'</span>;
+<span class="keyword">import</span> { createHealingFixture, HealPage } from <span class="string">'healwright'</span>;
+
+<span class="keyword">export const</span> test = base.extend<{ page: HealPage }>(createHealingFixture());
+<span class="keyword">export</span> { expect } from <span class="string">'@playwright/test'</span>;</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="step-block">
+                        <h4><span class="step-num">04</span> Write Your First Test</h4>
+                        <p>Use the wrapped page in your tests. If a selector breaks, AI fixes it automatically.</p>
+                        <div class="code-preview">
+                            <pre><code class="language-typescript"><span class="keyword">import</span> { test, expect } from <span class="string">'./fixtures'</span>;
+
+<span class="keyword">test</span>(<span class="string">'login flow'</span>, <span class="keyword">async</span> ({ page }) => {
+  <span class="keyword">await</span> page.goto(<span class="string">'https://example.com'</span>);
+  
+  <span class="comment">// If this selector breaks, AI will find the right element</span>
+  <span class="keyword">await</span> page.heal.<span class="function">click</span>(
+    page.locator(<span class="string">'[data-testid="submit-btn"]'</span>),
+    <span class="string">'Submit button on form'</span>
+  );
+  
+  <span class="comment">// Or skip the selector entirely</span>
+  <span class="keyword">await</span> page.heal.<span class="function">fill</span>(<span class="string">''</span>, <span class="string">'Email input field'</span>, <span class="string">'user@example.com'</span>);
+});</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="step-block">
+                        <h4><span class="step-num">05</span> Available Methods</h4>
+                        <p>All healing methods take a locator (or empty string for AI-only) and a description.</p>
+                        <div class="methods-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Method</th>
+                                        <th>What it does</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><code>heal.click(locator, desc)</code></td>
+                                        <td>Click an element</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>heal.fill(locator, desc, value)</code></td>
+                                        <td>Fill an input</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>heal.selectOption(locator, desc, value)</code></td>
+                                        <td>Select from dropdown</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>heal.check(locator, desc)</code></td>
+                                        <td>Check a checkbox</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>heal.dblclick(locator, desc)</code></td>
+                                        <td>Double-click</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>heal.hover(locator, desc)</code></td>
+                                        <td>Hover over element</td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>heal.focus(locator, desc)</code></td>
+                                        <td>Focus element</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="step-block">
+                        <h4><span class="step-num">06</span> AI-Only Mode</h4>
+                        <p>Pass an empty string as the locator and let AI find the element based on your description
+                            alone.</p>
+                        <div class="code-preview">
+                            <pre><code class="language-typescript"><span class="keyword">await</span> page.heal.<span class="function">click</span>(<span class="string">''</span>, <span class="string">'Login button'</span>);
+<span class="keyword">await</span> page.heal.<span class="function">fill</span>(<span class="string">''</span>, <span class="string">'Search input'</span>, <span class="string">'my query'</span>);</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="step-block">
+                        <h4><span class="step-num">07</span> Cache Configuration</h4>
+                        <p>Healed selectors are cached in <code>.self-heal/</code>. Add it to your
+                            <code>.gitignore</code>:
+                        </p>
+                        <div class="code-preview">
+                            <pre><code class="language-bash"># .gitignore
+.self-heal/</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container footer-content">
+            <div class="footer-left">
+                <div class="logo">
+                    <img src="./owl.png" alt="Healwright Icon" class="nav-logo-img">
+                    <span class="brand-text">Healwright</span>
+                </div>
+                <p>Built for the modern web automation tests.</p>
+            </div>
+            <div class="footer-links">
+                <a href="#">Documentation</a>
+                <a href="#">GitHub</a>
+                <a href="#">NPM</a>
+                <a href="#">License</a>
+            </div>
+        </div>
+        <div class="container copyright">
+            &copy; 2026 Healwright. All rights reserved.
+        </div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="./healw_icon.png" alt="Healwright Logo" width="300"/>
+  <img src="./docs/owl.png" alt="Healwright Logo" width="150" style="margin-bottom: 20px;"/>
   
-  # healwright
+  # Healwright
 
   AI-powered self-healing locators for Playwright. When your selectors break, healwright figures out what you meant and finds the element anyway.
 

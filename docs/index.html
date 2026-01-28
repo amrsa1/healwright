@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Healwright | AI-Powered Self-Healing Locators</title>
+    <meta name="description"
+        content="AI-powered self-healing locators for Playwright. When your selectors break, healwright figures out what you meant and finds the element anyway.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+
+    <nav class="navbar">
+        <div class="container nav-content">
+            <div class="logo">
+                <img src="./owl.png" alt="Healwright Icon" class="nav-logo-img">
+                <span class="brand-text">Healwright</span>
+            </div>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#how-it-works">How it Works</a>
+                <a href="https://github.com/amr-salem/healwright" class="btn btn-secondary"><i data-lucide="github"></i>
+                    GitHub</a>
+                <a href="get-started.html" class="btn btn-primary">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="container hero-content">
+            <div class="hero-text">
+                <img src="./pw.png" class="hero-bg-logo" alt="">
+                <div class="badge-animated">
+                    <span class="badge-dot"></span>
+                    Now with AI-Only Mode
+                </div>
+                <h1>Self-Healing Tests for <span class="gradient-text">Playwright</span></h1>
+                <p class="hero-subtitle">
+                    Don't let broken selectors break your build. Healwright uses AI to understand your intent and fix
+                    locators at runtime.
+                </p>
+                <div class="hero-cta">
+                    <div class="command-block">
+                        <span class="prompt">$</span> npm install healwright
+                        <button class="copy-btn" onclick="navigator.clipboard.writeText('npm install healwright')">
+                            <i data-lucide="copy"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="glass-card main-card">
+                    <div class="card-header">
+                        <span class="dot red"></span>
+                        <span class="dot yellow"></span>
+                        <span class="dot green"></span>
+                    </div>
+                    <div class="code-preview">
+                        <pre><code class="language-typescript"><span class="keyword">test</span>(<span class="string">'login flow'</span>, <span class="keyword">async</span> ({ page }) => {
+  <span class="comment">// If this selector breaks, AI fixes it</span>
+  <span class="keyword">await</span> page.heal.<span class="function">click</span>(
+    <span class="selector">page.locator('[data-testid="btn"]')</span>,
+    <span class="string">'Submit button on form'</span>
+  );
+  
+  <span class="comment">// Or just describe it!</span>
+  <span class="keyword">await</span> page.heal.<span class="function">fill</span>(
+    <span class="string">''</span>, 
+    <span class="string">'Email input field'</span>, 
+    <span class="string">'user@example.com'</span>
+  );
+});</code></pre>
+                    </div>
+                    <div class="healing-overlay">
+                        <div class="healing-status">
+                            <i data-lucide="sparkles"></i>
+                            <span>AI Healing Active...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section id="features" class="features">
+        <div class="container">
+            <h2 class="section-title">Forward-Thinking <span class="gradient-text">Testing</span></h2>
+            <div class="grid feature-grid">
+                <div class="feature-card">
+                    <div class="icon-box">
+                        <i data-lucide="zap"></i>
+                    </div>
+                    <h3>Self-Healing Locators</h3>
+                    <p>When formatted structure changes, our AI analyzes the DOM to find the element you actually meant.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon-box">
+                        <i data-lucide="coffee"></i>
+                    </div>
+                    <h3>Too Lazy? No Problem</h3>
+                    <p>Leave the locator empty and just describe the element. Healwright will find it for you.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon-box">
+                        <i data-lucide="hard-drive"></i>
+                    </div>
+                    <h3>Smart Caching</h3>
+                    <p>Healed selectors are cached locally. You don't burn API credits on subsequent runs.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon-box">
+                        <i data-lucide="layers"></i>
+                    </div>
+                    <h3>Drop-in Replacement</h3>
+                    <p>Works seamlessly with your existing Playwright setup. Mix and match healed and standard locators.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="how-it-works" class="how-it-works">
+        <div class="container">
+            <h2 class="section-title">How It <span class="gradient-text">Works</span></h2>
+            <div class="steps-timeline">
+                <div class="step-item">
+                    <div class="step-number">01</div>
+                    <div class="step-content">
+                        <h3>Try First</h3>
+                        <p>Your original locator runs with a quick timeout. If it works, we're done—zero overhead.</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-number">02</div>
+                    <div class="step-content">
+                        <h3>Collect & Analyze</h3>
+                        <p>On failure, Healwright gathers DOM candidates and sends them to AI along with your intent
+                            description.</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-number">03</div>
+                    <div class="step-content">
+                        <h3>Validate</h3>
+                        <p>AI returns ranked strategies (testid, role, label). Each is validated until one matches a
+                            single visible element.</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-number">04</div>
+                    <div class="step-content">
+                        <h3>Cache & Reuse</h3>
+                        <p>The working selector is cached locally. Subsequent runs skip the AI entirely.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+    <footer>
+        <div class="container footer-content">
+            <div class="footer-left">
+                <div class="logo">
+                    <img src="./owl.png" alt="Healwright Icon" class="nav-logo-img">
+                    <span class="brand-text">Healwright</span>
+                </div>
+                <p>Built for the modern web automation tests.</p>
+            </div>
+            <div class="footer-links">
+                <a href="#">Documentation</a>
+                <a href="#">GitHub</a>
+                <a href="#">NPM</a>
+                <a href="#">License</a>
+            </div>
+        </div>
+        <div class="container copyright">
+            &copy; 2026 Healwright. All rights reserved.
+        </div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+
+        // Simple intersection observer for fade-in animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        });
+
+        document.querySelectorAll('.feature-card, .step-item').forEach((el) => {
+            el.classList.add('fade-in-section');
+            observer.observe(el);
+        });
+    </script>
+</body>
+
+</html>
