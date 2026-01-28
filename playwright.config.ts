@@ -10,11 +10,15 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: 1,
-  reporter: 'list',
+  reporter: [
+    ['list'],
+    ['html', { open: 'never' }]
+  ],
   timeout: 60000,
   use: {
     baseURL: 'https://todomvc.com',
     trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
   },
   projects: [
     {

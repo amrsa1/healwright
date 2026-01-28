@@ -37,23 +37,29 @@
     "web-testing",
     "resilient-tests",
     "gpt",
-    "openai"
+    "openai",
+    "anthropic",
+    "claude",
+    "gemini",
+    "google"
   ],
   "author": "Amr Salem",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/user/healwright"
+    "url": "https://github.com/amrsa1/healwright"
   },
   "bugs": {
-    "url": "https://github.com/user/healwright/issues"
+    "url": "https://github.com/amrsa1/healwright/issues"
   },
-  "homepage": "https://github.com/user/healwright#readme",
+  "homepage": "https://github.com/amrsa1/healwright#readme",
   "peerDependencies": {
     "@playwright/test": ">=1.40.0"
   },
   "dependencies": {
     "openai": "^6.16.0",
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@google/genai": "^0.11.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

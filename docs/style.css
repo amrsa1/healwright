@@ -622,3 +622,60 @@ footer {
     font-family: var(--font-mono);
     font-size: 0.875rem;
 }
+
+/* Supported Providers */
+.providers {
+    padding: 100px 0;
+    text-align: center;
+}
+
+.provider-grid {
+    display: flex;
+    justify-content: center;
+    gap: 3rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 3rem;
+}
+
+.provider-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 2rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    width: 220px;
+    transition: all 0.3s ease;
+}
+
+.provider-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--text-main);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.provider-icon {
+    width: 64px;
+    height: 64px;
+    color: var(--text-muted);
+    transition: all 0.3s ease;
+}
+
+.provider-card:hover .provider-icon {
+    color: var(--text-main);
+    filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.3));
+}
+
+.provider-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    transition: color 0.3s ease;
+}
+
+.provider-card:hover .provider-name {
+    color: var(--text-main);
+}

@@ -3,8 +3,9 @@
  */
 
 import { Page, Locator } from "@playwright/test";
-import OpenAI from "openai";
 import path from "node:path";
+
+import { createAIProvider, AIProvider, ProviderName } from "./providers";
 
 import { healLog } from "./logger";
 import {
@@ -13,9 +14,11 @@ import {
   StrategyT,
   CacheT,
   HealMethods,
+  HealingLocator,
   HealPage,
   HealOptions,
   HealPlan,
+  HealError,
   healPlanJsonSchema,
 } from "./types";
 import {
@@ -55,10 +58,17 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
   // Configuration
   const enabled = opts?.enabled ?? (process.env.SELF_HEAL === "1" || process.env.AI_SELF_HEAL === "true");
   const apiKey = opts?.apiKey ?? process.env.AI_API_KEY;
-  const openai = enabled && apiKey ? new OpenAI({ apiKey }) : null;
+  const providerName = (opts?.provider ?? process.env.AI_PROVIDER?.toLowerCase() ?? "openai") as ProviderName;
+  const model = opts?.model ?? process.env.AI_MODEL;
+
+  // Create AI provider if enabled
+  let aiProvider: AIProvider | null = null;
+  if (enabled && apiKey) {
+    aiProvider = createAIProvider(providerName, { apiKey, model });
+  }
+
   const cacheFile = opts?.cacheFile ?? path.join(process.cwd(), ".self-heal", "healed_locators.json");
   const reportFile = opts?.reportFile ?? path.join(process.cwd(), ".self-heal", "heal_events.jsonl");
-  const model = opts?.model ?? process.env.AI_MODEL ?? "gpt-4o-mini";
   const maxAiTries = opts?.maxAiTries ?? 4;
   const timeout = opts?.timeout ?? 5000;
   const quickTimeout = enabled ? 1000 : timeout;
@@ -90,8 +100,13 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     await appendLog(reportFile, entry);
   }
 
-  async function askAI(action: Action, contextName: string) {
-    if (!openai) throw new Error("Healing disabled or API key not set");
+  interface AskAIResult {
+    plan: import("./types").HealPlanT | null;
+    candidatesAnalyzed: number;
+  }
+
+  async function askAI(action: Action, contextName: string): Promise<AskAIResult> {
+    if (!aiProvider) throw new Error("Healing disabled or API key not set");
 
     const candidates = await collectCandidates(page, action);
     healLog.askingAI(contextName, candidates.length);
@@ -106,67 +121,64 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
 
     const userContent = JSON.stringify({ url: page.url(), action, contextName, candidates });
 
-    try {
-      const resp = await (openai as any).responses.create({
-        model,
-        input: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userContent },
-        ],
-        text: {
-          format: {
-            type: "json_schema",
-            name: "HealPlan",
-            strict: true,
-            schema: healPlanJsonSchema,
-          },
-        },
-        store: false,
-      });
+    const plan = await aiProvider.generateHealPlan({
+      systemPrompt,
+      userContent,
+      jsonSchema: healPlanJsonSchema,
+    });
 
-      const content = resp.output_text;
-      healLog.aiResponse(content?.length ?? 0);
-      
-      if (!content) return null;
-      
-      try {
-        return HealPlan.parse(JSON.parse(content));
-      } catch {
-        healLog.candidateError("parse", "Failed to parse AI response");
-        return null;
-      }
-    } catch (aiErr: any) {
-      healLog.candidateError("api", aiErr?.message ?? String(aiErr));
-      throw aiErr;
-    }
+    return { plan, candidatesAnalyzed: candidates.length };
   }
 
-  async function pickValid(plan: ReturnType<typeof HealPlan.parse>) {
+  interface PickResult {
+    choice: ReturnType<typeof HealPlan.parse>["candidates"][0] | null;
+    strategiesTried: Array<{ type: string; reason: string }>;
+  }
+
+  interface PickValidOptions {
+    skipVisibilityCheck?: boolean;
+  }
+
+  async function pickValid(plan: ReturnType<typeof HealPlan.parse>, options?: PickValidOptions): Promise<PickResult> {
+    const strategiesTried: Array<{ type: string; reason: string }> = [];
+    const skipVisibilityCheck = options?.skipVisibilityCheck ?? false;
+
     for (const c of plan.candidates.slice(0, maxAiTries)) {
       const validationError = validateStrategy(c.strategy);
       if (validationError) {
         healLog.candidateRejected(c.strategy.type, validationError);
+        strategiesTried.push({ type: c.strategy.type, reason: validationError });
         continue;
       }
       try {
         const loc = buildLocator(page, c.strategy);
         const count = await loc.count();
         if (count !== 1) {
+          const reason = count === 0 ? "element not found" : `matched ${count} elements (must be unique)`;
           healLog.candidateRejected(c.strategy.type, `count=${count}`);
+          strategiesTried.push({ type: c.strategy.type, reason });
           continue;
         }
-        const visible = await loc.first().isVisible();
-        if (!visible) {
-          healLog.candidateRejected(c.strategy.type, "not visible");
-          continue;
+
+        // Skip visibility check if force option is used
+        if (!skipVisibilityCheck) {
+          const visible = await loc.first().isVisible();
+          if (!visible) {
+            healLog.candidateRejected(c.strategy.type, "not visible");
+            strategiesTried.push({ type: c.strategy.type, reason: "element exists but not visible" });
+            continue;
+          }
         }
-        return c;
+
+        return { choice: c, strategiesTried };
       } catch (err: any) {
-        healLog.candidateError(c.strategy.type, err?.message);
+        const reason = err?.message ?? "unknown error";
+        healLog.candidateError(c.strategy.type, reason);
+        strategiesTried.push({ type: c.strategy.type, reason: `error: ${reason}` });
         continue;
       }
     }
-    return null;
+    return { choice: null, strategiesTried };
   }
 
   async function saveToCache(key: string, strategy: StrategyT, contextName: string) {
@@ -177,12 +189,17 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
   }
 
   // Generic heal action handler
+  interface HealActionOptions {
+    aiAction?: Action; // Override action type for AI (e.g., check uses "fill" candidates)
+    forceClick?: boolean; // Skip visibility check for hover-dependent buttons
+  }
+
   async function healAction(
     action: Action,
     target: LocatorOrEmpty,
     contextName: string,
     performAction: (loc: Locator) => Promise<void>,
-    aiAction?: Action // Override action type for AI (e.g., check uses "fill" candidates)
+    options?: HealActionOptions
   ): Promise<void> {
     const ts = new Date().toISOString();
     const key = cacheKey(page, action, contextName);
@@ -229,20 +246,48 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     }
 
     // Ask AI
+    let candidatesAnalyzed = 0;
+    let strategiesTried: Array<{ type: string; reason: string }> = [];
+
     try {
-      const plan = await askAI(aiAction ?? action, contextName);
-      const choice = await pickValid(plan!);
+      const aiResult = await askAI(options?.aiAction ?? action, contextName);
+      candidatesAnalyzed = aiResult.candidatesAnalyzed;
+
+      if (!aiResult.plan) {
+        await log({ ts, url: page.url(), key, action, contextName, used: "healed", success: false, error: "AI returned no plan" });
+        healLog.noValidCandidate(contextName);
+        throw new HealError("AI returned no suggestions", {
+          action,
+          contextName,
+          url: page.url(),
+          candidatesAnalyzed,
+          strategiesTried: [],
+        });
+      }
+
+      const pickResult = await pickValid(aiResult.plan, { skipVisibilityCheck: options?.forceClick });
+      strategiesTried = pickResult.strategiesTried;
+      const choice = pickResult.choice;
 
       if (!choice) {
         await log({ ts, url: page.url(), key, action, contextName, used: "healed", success: false, error: "No valid candidate" });
         healLog.noValidCandidate(contextName);
-        throw originalErr ?? new Error(`No valid candidate for: ${contextName}`);
+        throw new HealError("Could not find a matching element", {
+          action,
+          contextName,
+          url: page.url(),
+          candidatesAnalyzed,
+          strategiesTried,
+        });
       }
 
       await saveToCache(key, choice.strategy, contextName);
 
       const healedLoc = buildLocator(page, choice.strategy);
-      await waitForReady(healedLoc, action, timeout);
+      // Skip visibility wait when force is used (for hover-dependent elements)
+      if (!options?.forceClick) {
+        await waitForReady(healedLoc, action, timeout);
+      }
       await performAction(healedLoc);
       if (action === "click" || action === "dblclick") await waitForStable(page);
 
@@ -254,21 +299,45 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
       });
       healLog.healed(contextName, choice.strategy);
     } catch (healErr: any) {
+      // If it's already a HealError, just re-throw it
+      if (healErr instanceof HealError) {
+        await log({
+          ts, url: page.url(), key, action, contextName,
+          used: "healed", success: false,
+          error: healErr.message,
+        });
+        healLog.healFailed(contextName, "No matching element found");
+        throw healErr;
+      }
+
+      // Otherwise wrap it in a HealError for better context
       await log({
         ts, url: page.url(), key, action, contextName,
         used: "healed", success: false,
         error: `Heal failed: ${String(healErr?.message ?? healErr)}`,
       });
       healLog.healFailed(contextName, String(healErr?.message ?? healErr));
-      throw aiOnlyMode ? healErr : originalErr;
+
+      throw new HealError(String(healErr?.message ?? healErr), {
+        action,
+        contextName,
+        url: page.url(),
+        candidatesAnalyzed,
+        strategiesTried,
+      });
     }
   }
 
   // Heal methods
   const healMethods: HealMethods = {
-    click: (target, contextName) => healAction(
+    click: (target, contextName, clickOptions) => healAction(
       "click", target, contextName,
-      (loc) => loc.click({ timeout })
+      // For display:none elements (force mode), use dispatchEvent which bypasses
+      // the need for element dimensions. Regular click() fails on display:none.
+      clickOptions?.force
+        ? (loc) => loc.dispatchEvent('click')
+        : (loc) => loc.click({ timeout }),
+      { forceClick: clickOptions?.force }
     ),
 
     fill: (target, contextName, value) => healAction(
@@ -284,28 +353,42 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     dblclick: (target, contextName) => healAction(
       "dblclick", target, contextName,
       (loc) => loc.dblclick({ timeout }),
-      "click" // Use click candidates for dblclick
+      { aiAction: "click" } // Use click candidates for dblclick
     ),
 
     check: (target, contextName) => healAction(
       "check", target, contextName,
       (loc) => loc.check({ timeout }),
-      "fill" // Use fill candidates for check (inputs)
+      { aiAction: "fill" } // Use fill candidates for check (inputs)
     ),
 
     hover: (target, contextName) => healAction(
       "hover", target, contextName,
       (loc) => loc.hover({ timeout }),
-      "click" // Use click candidates for hover
+      { aiAction: "click" } // Use click candidates for hover
     ),
 
     focus: (target, contextName) => healAction(
       "focus", target, contextName,
       (loc) => loc.focus({ timeout }),
-      "fill" // Use fill candidates for focus
+      { aiAction: "fill" } // Use fill candidates for focus
     ),
 
     setTestName: (name) => { currentTestName = name; },
+
+    // Create a self-healing locator with semantic description fallback
+    locator: (selector: string, contextName: string): HealingLocator => {
+      const baseLoc = page.locator(selector);
+      return {
+        click: (options) => healMethods.click(baseLoc, contextName, options),
+        fill: (value) => healMethods.fill(baseLoc, contextName, value),
+        dblclick: () => healMethods.dblclick(baseLoc, contextName),
+        check: () => healMethods.check(baseLoc, contextName),
+        hover: () => healMethods.hover(baseLoc, contextName),
+        focus: () => healMethods.focus(baseLoc, contextName),
+        selectOption: (value) => healMethods.selectOption(baseLoc, contextName, value),
+      };
+    },
   };
 
   // Attach to page
