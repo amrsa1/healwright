@@ -679,3 +679,50 @@ footer {
 .provider-card:hover .provider-name {
     color: var(--text-main);
 }
+/* Stats/Promo Bar */
+.promo-bar {
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.03);
+    padding: 2.5rem 0;
+    margin-top: 0;
+    position: relative;
+    z-index: 10;
+    backdrop-filter: blur(10px);
+}
+
+.promo-content {
+    display: flex;
+    justify-content: center;
+    gap: 4rem;
+    flex-wrap: wrap;
+}
+
+.promo-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.promo-item:hover {
+    color: var(--text-main);
+    transform: translateY(-2px);
+}
+
+.promo-item i {
+    color: #ef4444; /* Red for 'No more' or use accent */
+}
+
+.promo-item.check i {
+    color: #22c55e;
+}
+
+.promo-item span {
+    background: linear-gradient(to right, #e2e2e2, #a1a1aa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}

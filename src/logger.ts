@@ -94,4 +94,13 @@ export const healLog = {
   noValidCandidate: (contextName: string) => {
     console.log(`${c.gray}  │  ${c.red}↳ no valid candidate found${c.reset}`);
   },
+
+  warn: (message: string) => {
+    console.log(`${c.gray}  │${c.reset}`);
+    console.log(`${c.gray}  └─${c.reset} ${c.yellow}⚠${c.reset} ${c.yellow}${message}${c.reset}`);
+  },
+
+  aiDisabled: () => {
+    console.log(`${c.yellow}⚠ Set SELF_HEAL=1 or AI_SELF_HEAL=true with AI_API_KEY to enable AI detection${c.reset}`);
+  },
 };

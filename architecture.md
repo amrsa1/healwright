@@ -96,7 +96,7 @@ Healwright is an AI-powered self-healing locator system for Playwright. When a l
 ├──────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │   .self-heal/                                                                │
-│   ├── healed_locators.json    # Cached strategies (commit to repo)          │
+│   ├── healed_locators.json    # Cached strategies (commit to repo)           │
 │   └── heal_events.jsonl       # Event log (gitignore)                        │
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘

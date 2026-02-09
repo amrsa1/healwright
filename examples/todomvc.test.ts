@@ -9,14 +9,14 @@ test.describe('healwright - AI-Only Mode', () => {
     await page.goto('/examples/react/dist/');
   });
 
-  test('should add a todo using AI detection', async ({ page }) => {
+  test.only('should add a todo using AI detection', async ({ page }) => {
     await page.heal.fill('', 'Input field to add new todo items', 'Buy groceries');
     await page.keyboard.press('Enter');
 
     await expect(page.getByText('Buy groceries')).toBeVisible();
   });
 
-  test('should complete a todo using AI detection', async ({ page }) => {
+  test.only('should complete a todo using AI detection', async ({ page }) => {
     await page.heal.locator('.ngfg', 'Input field for adding new todos').fill('Learn healwright');
     await page.keyboard.press('Enter');
 
@@ -25,7 +25,7 @@ test.describe('healwright - AI-Only Mode', () => {
     await expect(page.locator('.todo-list li')).toHaveClass(/completed/);
   });
 
-  test('should delete a todo using AI detection', async ({ page }) => {
+  test.only('should delete a todo using AI detection', async ({ page }) => {
     await page.locator('.new-todo').fill('Task to delete');
     await page.keyboard.press('Enter');
 

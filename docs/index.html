@@ -92,6 +92,23 @@
         </div>
     </header>
 
+    <div class="promo-bar fade-in-section">
+        <div class="container promo-content">
+            <div class="promo-item">
+                <i data-lucide="check-circle" style="color: var(--accent);"></i>
+                <span>No more broken locators</span>
+            </div>
+            <div class="promo-item">
+                <i data-lucide="check-circle" style="color: var(--accent);"></i>
+                <span>No more flaky tests</span>
+            </div>
+            <div class="promo-item">
+                <i data-lucide="check-circle" style="color: var(--accent);"></i>
+                <span>No more time to waste</span>
+            </div>
+        </div>
+    </div>
+
     <section id="features" class="features">
         <div class="container">
             <h2 class="section-title">Forward-Thinking <span class="gradient-text">Testing</span></h2>
@@ -258,7 +275,7 @@
             });
         });
 
-        document.querySelectorAll('.feature-card, .step-item').forEach((el) => {
+        document.querySelectorAll('.feature-card, .step-item, .promo-bar').forEach((el) => {
             el.classList.add('fade-in-section');
             observer.observe(el);
         });

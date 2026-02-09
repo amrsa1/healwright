@@ -76,6 +76,7 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
   // State
   let currentTestName = opts?.testName;
   let bannerShownForTest: string | undefined;
+  let aiDisabledWarningShown = false;
   const mem = new Map<string, StrategyT>();
   let diskCacheLoaded = false;
   let diskCache: CacheT = {};
@@ -218,7 +219,14 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
 
     // AI healing flow
     const originalErr = aiOnlyMode ? new Error(`AI detect mode for: ${contextName}`) : null;
-    if (!enabled && aiOnlyMode) throw new Error("AI detection requires healing to be enabled");
+    if (!enabled && aiOnlyMode) {
+      // Show warning once when AI is not available
+      if (!aiDisabledWarningShown) {
+        healLog.aiDisabled();
+        aiDisabledWarningShown = true;
+      }
+      return;
+    }
 
     showBannerOnce();
     if (aiOnlyMode) {
