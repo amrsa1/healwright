@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Element Zoo — healwright test fixture</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; padding: 24px; background: #f8f9fa; color: #212529; }
+    h2 { margin: 28px 0 12px; border-bottom: 2px solid #dee2e6; padding-bottom: 4px; }
+    section { margin-bottom: 16px; padding: 16px; background: #fff; border-radius: 8px; border: 1px solid #dee2e6; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+    label { cursor: pointer; }
+    #log { margin-top: 24px; padding: 12px; font-family: monospace; font-size: 13px; background: #212529; color: #0f0; border-radius: 6px; min-height: 60px; white-space: pre-wrap; }
+
+    /* --- specific styles ------------------------------------------------- */
+    /* CSS-hidden checkbox (TodoMVC pattern) */
+    .css-hidden-checkbox { opacity: 0; position: absolute; }
+    .css-hidden-checkbox + label { cursor: pointer; user-select: none; }
+
+    /* hover-reveal button */
+    .hover-container .hover-reveal { display: none; }
+    .hover-container:hover .hover-reveal { display: inline-block; }
+
+    /* drag-and-drop */
+    .drag-zone { display: flex; gap: 12px; }
+    .draggable { width: 80px; height: 80px; border: 2px solid #495057; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: grab; user-select: none; background: #e9ecef; }
+    .drop-target { width: 120px; height: 80px; border: 2px dashed #868e96; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #868e96; }
+    .drop-target.drag-over { border-color: #228be6; background: #e7f5ff; }
+    .drop-target.dropped { border-style: solid; border-color: #2f9e44; background: #d3f9d8; color: #212529; }
+
+    /* tree */
+    .tree-item { padding: 4px 12px; cursor: pointer; border-radius: 4px; }
+    .tree-item.selected { background: #228be6; color: #fff; }
+
+    /* grid */
+    .data-grid { border-collapse: collapse; }
+    .data-grid td, .data-grid th { border: 1px solid #dee2e6; padding: 6px 12px; cursor: pointer; }
+    .data-grid tr.selected td { background: #e7f5ff; }
+
+    /* slider */
+    input[type="range"] { width: 200px; }
+
+    /* tabs */
+    .tab-bar { display: flex; gap: 0; }
+    .tab-bar [role="tab"] { padding: 8px 16px; border: 1px solid #dee2e6; cursor: pointer; background: #f8f9fa; }
+    .tab-bar [role="tab"][aria-selected="true"] { background: #fff; border-bottom-color: #fff; font-weight: bold; }
+    .tab-panel { border: 1px solid #dee2e6; border-top: none; padding: 16px; background: #fff; }
+
+    /* menu */
+    .menu { background: #fff; border: 1px solid #dee2e6; border-radius: 6px; padding: 4px 0; display: none; position: absolute; min-width: 160px; z-index: 10; }
+    .menu.open { display: block; }
+    .menu [role="menuitem"],
+    .menu [role="menuitemcheckbox"],
+    .menu [role="menuitemradio"] { padding: 6px 16px; cursor: pointer; }
+    .menu [role="menuitem"]:hover,
+    .menu [role="menuitemcheckbox"]:hover,
+    .menu [role="menuitemradio"]:hover { background: #e9ecef; }
+
+    /* switch */
+    .switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+    .switch-track { width: 44px; height: 24px; border-radius: 12px; background: #adb5bd; position: relative; transition: background .2s; }
+    .switch-track.on { background: #228be6; }
+    .switch-track::after { content: ""; position: absolute; width: 20px; height: 20px; border-radius: 50%; background: #fff; top: 2px; left: 2px; transition: transform .2s; }
+    .switch-track.on::after { transform: translateX(20px); }
+
+    .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+  </style>
+</head>
+<body>
+  <h1>Element Zoo</h1>
+  <p id="log" aria-live="polite"></p>
+
+  <!-- ────────────────── CLICK targets ────────────────── -->
+  <h2>Click Targets</h2>
+
+  <section>
+    <h3>Buttons</h3>
+    <div class="row">
+      <button data-testid="btn-primary" onclick="log('button clicked')">Primary Button</button>
+      <button data-test="btn-secondary" type="button" onclick="log('secondary clicked')">Secondary Button</button>
+      <input type="button" value="Input Button" data-qa="input-btn" onclick="log('input-button clicked')">
+      <input type="submit" value="Submit" data-cy="submit-btn" onclick="event.preventDefault(); log('submit clicked')">
+      <input type="reset" value="Reset" data-test-id="reset-btn" onclick="log('reset clicked')">
+      <input type="image" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Crect fill='%23228be6' width='24' height='24' rx='4'/%3E%3C/svg%3E" alt="Image Submit" title="Submit via image" onclick="event.preventDefault(); log('image-input clicked')">
+    </div>
+  </section>
+
+  <section>
+    <h3>Links</h3>
+    <div class="row">
+      <a href="#" onclick="event.preventDefault(); log('link clicked')" data-testid="nav-link">Navigation Link</a>
+      <a href="#" onclick="event.preventDefault(); log('aria-link clicked')" role="link" aria-label="Accessible link">Aria Link</a>
+    </div>
+  </section>
+
+  <section>
+    <h3>ARIA Role Buttons</h3>
+    <div class="row">
+      <div role="button" tabindex="0" data-testid="role-btn" onclick="log('role-button clicked')">Role Button</div>
+      <span role="button" tabindex="0" aria-label="Icon action" onclick="log('span-button clicked')">⚡ Span Button</span>
+    </div>
+  </section>
+
+  <section>
+    <h3>Labels &amp; Hidden Inputs</h3>
+    <div class="row">
+      <input type="checkbox" id="css-cb" class="css-hidden-checkbox" onchange="log('css-hidden checkbox ' + (this.checked ? 'checked' : 'unchecked'))">
+      <label for="css-cb" data-testid="css-cb-label">CSS-hidden checkbox (opacity:0 pattern)</label>
+    </div>
+    <div class="row">
+      <label data-testid="label-click" onclick="log('label clicked')">Standalone clickable label</label>
+    </div>
+  </section>
+
+  <section>
+    <h3>Images</h3>
+    <div class="row">
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='18' fill='%23fab005'/%3E%3C/svg%3E"
+           alt="Notification bell" title="View notifications" onclick="log('img clicked')" style="cursor:pointer;" data-testid="bell-icon">
+    </div>
+  </section>
+
+  <section>
+    <h3>List Items</h3>
+    <ul>
+      <li data-testid="li-item-1" onclick="log('list item 1 clicked')" style="cursor:pointer; padding:4px 8px;">Clickable list item 1</li>
+      <li data-testid="li-item-2" onclick="log('list item 2 clicked')" style="cursor:pointer; padding:4px 8px;">Clickable list item 2</li>
+      <li data-testid="li-item-3" onclick="log('list item 3 clicked')" style="cursor:pointer; padding:4px 8px;">Clickable list item 3</li>
+    </ul>
+  </section>
+
+  <section>
+    <h3>Details / Summary</h3>
+    <details data-testid="details-widget">
+      <summary>Click to expand</summary>
+      <p id="details-content">Expanded content is now visible!</p>
+    </details>
+  </section>
+
+  <section>
+    <h3>Tabindex Custom Elements</h3>
+    <div class="row">
+      <div tabindex="0" role="button" data-testid="custom-btn" onclick="log('tabindex div clicked')" style="padding:6px 12px; border:1px solid #adb5bd; border-radius:4px; cursor:pointer;">Custom focusable div</div>
+    </div>
+  </section>
+
+  <!-- ────────────────── FILL targets ────────────────── -->
+  <h2>Fill Targets</h2>
+
+  <section>
+    <h3>Text Inputs</h3>
+    <div class="row">
+      <input type="text" placeholder="Enter your name" data-testid="input-name" aria-label="Full name">
+      <input type="email" placeholder="Email address" data-testid="input-email">
+      <input type="password" placeholder="Password" data-testid="input-password">
+      <input type="search" placeholder="Search..." data-testid="input-search">
+      <input type="tel" placeholder="Phone number" data-testid="input-tel">
+      <input type="url" placeholder="Website URL" data-testid="input-url">
+      <input type="number" placeholder="Quantity" data-testid="input-number" min="0" max="100">
+    </div>
+    <div class="row">
+      <input type="date" data-testid="input-date" aria-label="Date of birth">
+    </div>
+  </section>
+
+  <section>
+    <h3>Textarea</h3>
+    <textarea placeholder="Write a comment..." data-testid="textarea-comment" rows="3" cols="40" aria-label="Comment box"></textarea>
+  </section>
+
+  <section>
+    <h3>ContentEditable</h3>
+    <div contenteditable="true" role="textbox" data-testid="contenteditable" aria-label="Rich text editor"
+         style="border:1px solid #adb5bd; padding:8px; border-radius:4px; min-height:40px;"></div>
+  </section>
+
+  <!-- ────────────────── CHECK / UNCHECK ────────────────── -->
+  <h2>Check / Uncheck</h2>
+
+  <section>
+    <h3>Native Checkboxes</h3>
+    <div class="row">
+      <label><input type="checkbox" data-testid="cb-agree" onchange="log('agree: ' + this.checked)"> I agree to terms</label>
+      <label><input type="checkbox" data-testid="cb-newsletter" onchange="log('newsletter: ' + this.checked)"> Subscribe to newsletter</label>
+    </div>
+    <h3>Native Radio Buttons</h3>
+    <div class="row">
+      <label><input type="radio" name="plan" value="free" data-testid="radio-free" onchange="log('plan: free')"> Free</label>
+      <label><input type="radio" name="plan" value="pro" data-testid="radio-pro" onchange="log('plan: pro')"> Pro</label>
+      <label><input type="radio" name="plan" value="enterprise" data-testid="radio-enterprise" onchange="log('plan: enterprise')"> Enterprise</label>
+    </div>
+    <h3>ARIA Checkbox</h3>
+    <div class="row">
+      <div role="checkbox" tabindex="0" aria-checked="false" data-testid="aria-checkbox"
+           onclick="ariaToggle(this)" onkeydown="if(event.key===' ')ariaToggle(this)"
+           style="cursor:pointer; padding:4px;">
+        ☐ ARIA Checkbox
+      </div>
+    </div>
+    <h3>ARIA Switch</h3>
+    <div class="row">
+      <div class="switch" role="switch" tabindex="0" aria-checked="false" aria-label="Dark mode" data-testid="switch-dark"
+           onclick="switchToggle(this)" onkeydown="if(event.key===' ')switchToggle(this)">
+        <div class="switch-track"></div>
+        <span>Dark mode</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────── SELECT OPTION ────────────────── -->
+  <h2>Select / Dropdown</h2>
+
+  <section>
+    <div class="row">
+      <label for="select-color">Color:</label>
+      <select id="select-color" data-testid="select-color" onchange="log('color: ' + this.value)">
+        <option value="">Choose...</option>
+        <option value="red">Red</option>
+        <option value="green">Green</option>
+        <option value="blue">Blue</option>
+      </select>
+    </div>
+    <div class="row">
+      <label for="select-multi">Multi-select:</label>
+      <select id="select-multi" data-testid="select-multi" multiple size="3" onchange="log('multi: ' + Array.from(this.selectedOptions).map(o=>o.value))">
+        <option value="apple">Apple</option>
+        <option value="banana">Banana</option>
+        <option value="cherry">Cherry</option>
+      </select>
+    </div>
+    <div class="row">
+      <div role="combobox" aria-expanded="false" aria-label="Country" data-testid="aria-combobox" tabindex="0"
+           style="border:1px solid #adb5bd; padding:6px 12px; border-radius:4px; cursor:pointer; min-width:160px;"
+           onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded') === 'true' ? 'false' : 'true'); log('combobox toggled')">
+        Select country...
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────── DOUBLE CLICK ────────────────── -->
+  <h2>Double Click</h2>
+
+  <section>
+    <div class="row">
+      <span data-testid="dblclick-text" ondblclick="this.contentEditable='true'; this.focus(); log('dblclick to edit')"
+            style="padding:4px 8px; border:1px solid #dee2e6; border-radius:4px; cursor:pointer;">
+        Double-click to edit me
+      </span>
+    </div>
+    <div class="row">
+      <div data-testid="dblclick-select" ondblclick="log('word selected via dblclick')"
+           style="padding:4px 8px; border:1px solid #dee2e6; border-radius:4px; cursor:pointer;">
+        Double-click to select this word
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────── HOVER ────────────────── -->
+  <h2>Hover</h2>
+
+  <section>
+    <div class="hover-container" data-testid="hover-container" style="padding:12px; border:1px solid #dee2e6; border-radius:4px;">
+      <span>Hover over me to reveal the button → </span>
+      <button class="hover-reveal" data-testid="hover-reveal-btn" onclick="log('hover-reveal clicked')">Hidden Button</button>
+    </div>
+    <div class="row" style="margin-top:8px;">
+      <div data-testid="tooltip-trigger" title="I am a tooltip" aria-label="Element with tooltip"
+           onmouseenter="document.getElementById('tooltip-box').style.display='block'; log('hover tooltip shown')"
+           onmouseleave="document.getElementById('tooltip-box').style.display='none'"
+           style="padding:6px 12px; border:1px solid #adb5bd; border-radius:4px; cursor:pointer;">
+        Hover for tooltip
+      </div>
+      <div id="tooltip-box" style="display:none; padding:4px 8px; background:#212529; color:#fff; border-radius:4px; font-size:12px;">Tooltip content</div>
+    </div>
+  </section>
+
+  <!-- ────────────────── FOCUS ────────────────── -->
+  <h2>Focus</h2>
+
+  <section>
+    <div class="row">
+      <input type="text" data-testid="focus-input" placeholder="Focus me" onfocus="log('input focused')" aria-label="Focus test input">
+      <button data-testid="focus-btn" onfocus="log('button focused')">Focusable Button</button>
+      <div tabindex="0" data-testid="focus-div" onfocus="log('div focused')" style="padding:6px 12px; border:1px solid #adb5bd; border-radius:4px;">Focusable div</div>
+    </div>
+  </section>
+
+  <!-- ────────────────── DRAG & DROP ────────────────── -->
+  <h2>Drag &amp; Drop</h2>
+
+  <section>
+    <div class="drag-zone">
+      <div class="draggable" draggable="true" data-testid="drag-item-a" id="drag-a"
+           ondragstart="event.dataTransfer.setData('text/plain', 'A'); log('drag started: A')">A</div>
+      <div class="draggable" draggable="true" data-testid="drag-item-b" id="drag-b"
+           ondragstart="event.dataTransfer.setData('text/plain', 'B'); log('drag started: B')">B</div>
+      <div class="drop-target" data-testid="drop-zone"
+           ondragover="event.preventDefault(); this.classList.add('drag-over')"
+           ondragleave="this.classList.remove('drag-over')"
+           ondrop="handleDrop(event, this)">
+        Drop here
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────── TABS ────────────────── -->
+  <h2>Tabs</h2>
+
+  <section>
+    <div class="tab-bar" role="tablist">
+      <div role="tab" tabindex="0" aria-selected="true" data-testid="tab-overview" onclick="switchTab(this, 'panel-overview')">Overview</div>
+      <div role="tab" tabindex="0" aria-selected="false" data-testid="tab-details" onclick="switchTab(this, 'panel-details')">Details</div>
+      <div role="tab" tabindex="0" aria-selected="false" data-testid="tab-reviews" onclick="switchTab(this, 'panel-reviews')">Reviews</div>
+    </div>
+    <div class="tab-panel" id="panel-overview" role="tabpanel">Overview content</div>
+    <div class="tab-panel" id="panel-details" role="tabpanel" style="display:none">Details content</div>
+    <div class="tab-panel" id="panel-reviews" role="tabpanel" style="display:none">Reviews content</div>
+  </section>
+
+  <!-- ────────────────── MENU ────────────────── -->
+  <h2>Context Menu</h2>
+
+  <section style="position:relative;">
+    <button data-testid="menu-trigger" onclick="document.getElementById('ctx-menu').classList.toggle('open'); log('menu toggled')">Open Menu</button>
+    <div id="ctx-menu" class="menu" role="menu">
+      <div role="menuitem" tabindex="0" data-testid="menu-cut" onclick="log('cut'); closeMenu()">✂ Cut</div>
+      <div role="menuitem" tabindex="0" data-testid="menu-copy" onclick="log('copy'); closeMenu()">📋 Copy</div>
+      <div role="menuitem" tabindex="0" data-testid="menu-paste" onclick="log('paste'); closeMenu()">📌 Paste</div>
+      <div role="menuitemcheckbox" tabindex="0" aria-checked="false" data-testid="menu-bold"
+           onclick="ariaToggle(this); log('bold: ' + this.getAttribute('aria-checked')); closeMenu()">
+        <strong>B</strong> Bold
+      </div>
+      <div role="menuitemradio" tabindex="0" aria-checked="false" data-testid="menu-align-left"
+           onclick="ariaToggle(this); log('align-left'); closeMenu()">
+        ⬅ Align Left
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────── TREE VIEW ────────────────── -->
+  <h2>Tree View</h2>
+
+  <section>
+    <div role="tree" aria-label="File explorer">
+      <div role="treeitem" tabindex="0" class="tree-item" data-testid="tree-src" onclick="selectTreeItem(this); log('tree: src')">📁 src</div>
+      <div role="treeitem" tabindex="0" class="tree-item" data-testid="tree-tests" onclick="selectTreeItem(this); log('tree: tests')" style="padding-left:24px;">📁 tests</div>
+      <div role="treeitem" tabindex="0" class="tree-item" data-testid="tree-index" onclick="selectTreeItem(this); log('tree: index.ts')" style="padding-left:36px;">📄 index.ts</div>
+    </div>
+  </section>
+
+  <!-- ────────────────── DATA GRID ────────────────── -->
+  <h2>Data Grid</h2>
+
+  <section>
+    <table class="data-grid" role="grid">
+      <thead>
+        <tr><th>Name</th><th>Email</th><th>Role</th></tr>
+      </thead>
+      <tbody>
+        <tr role="row" data-testid="grid-row-1" onclick="selectRow(this); log('row 1 selected')">
+          <td role="gridcell" data-testid="cell-name-1">Alice</td>
+          <td role="gridcell">alice@example.com</td>
+          <td role="gridcell">Admin</td>
+        </tr>
+        <tr role="row" data-testid="grid-row-2" onclick="selectRow(this); log('row 2 selected')">
+          <td role="gridcell" data-testid="cell-name-2">Bob</td>
+          <td role="gridcell">bob@example.com</td>
+          <td role="gridcell">User</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ────────────────── SLIDER ────────────────── -->
+  <h2>Slider / Spinbutton</h2>
+
+  <section>
+    <div class="row">
+      <label for="range-volume">Volume:</label>
+      <input type="range" id="range-volume" min="0" max="100" value="50" data-testid="slider-volume" aria-label="Volume"
+             oninput="document.getElementById('volume-val').textContent = this.value; log('volume: ' + this.value)">
+      <span id="volume-val">50</span>
+    </div>
+    <div class="row">
+      <div role="spinbutton" tabindex="0" aria-valuenow="5" aria-valuemin="0" aria-valuemax="10" aria-label="Quantity spinner"
+           data-testid="spinbutton" style="border:1px solid #adb5bd; padding:4px 12px; border-radius:4px; min-width:60px; text-align:center;">
+        5
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────── FILE UPLOAD ────────────────── -->
+  <h2>File Upload</h2>
+
+  <section>
+    <div class="row">
+      <label for="file-upload">Upload document:</label>
+      <input type="file" id="file-upload" data-testid="file-upload" aria-label="Upload document" onchange="log('file selected: ' + this.files[0]?.name)">
+    </div>
+  </section>
+
+  <script>
+    /* ── helpers ────────────────────────────────────────── */
+    function log(msg) {
+      const el = document.getElementById('log');
+      el.textContent = msg;
+    }
+
+    function ariaToggle(el) {
+      const checked = el.getAttribute('aria-checked') === 'true';
+      el.setAttribute('aria-checked', String(!checked));
+      if (el.getAttribute('role') === 'checkbox') {
+        el.textContent = (!checked ? '☑' : '☐') + ' ARIA Checkbox';
+      }
+    }
+
+    function switchToggle(el) {
+      const checked = el.getAttribute('aria-checked') === 'true';
+      el.setAttribute('aria-checked', String(!checked));
+      el.querySelector('.switch-track').classList.toggle('on', !checked);
+      log('switch: ' + !checked);
+    }
+
+    function handleDrop(event, target) {
+      event.preventDefault();
+      target.classList.remove('drag-over');
+      target.classList.add('dropped');
+      const data = event.dataTransfer.getData('text/plain');
+      target.textContent = 'Dropped: ' + data;
+      log('dropped: ' + data);
+    }
+
+    function switchTab(tab, panelId) {
+      document.querySelectorAll('[role="tab"]').forEach(t => t.setAttribute('aria-selected', 'false'));
+      document.querySelectorAll('[role="tabpanel"]').forEach(p => p.style.display = 'none');
+      tab.setAttribute('aria-selected', 'true');
+      document.getElementById(panelId).style.display = 'block';
+      log('tab: ' + tab.textContent);
+    }
+
+    function closeMenu() {
+      document.getElementById('ctx-menu').classList.remove('open');
+    }
+
+    function selectTreeItem(el) {
+      document.querySelectorAll('.tree-item').forEach(i => i.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    function selectRow(row) {
+      document.querySelectorAll('[role="row"]').forEach(r => r.classList.remove('selected'));
+      row.classList.add('selected');
+    }
+  </script>
+</body>
+</html>

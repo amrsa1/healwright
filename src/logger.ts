@@ -47,7 +47,7 @@ export const healLog = {
     console.log(`${c.gray}  ├─${c.reset} ${c.yellow}⚡${c.reset} ${c.dim}${action.toUpperCase()}${c.reset} ${c.white}${contextName}${c.reset}`);
   },
   
-  askingAI: (contextName: string, candidateCount: number) => {
+  askingAI: (_contextName: string, candidateCount: number) => {
     console.log(`${c.gray}  │  ${c.purple}⬡${c.reset} ${c.dim}analyzing ${candidateCount} elements...${c.reset}`);
   },
   
@@ -72,11 +72,11 @@ export const healLog = {
   },
   
   usedCache: (contextName: string) => {
-    console.log(`${c.gray}  │  ${c.cyan}◆${c.reset} ${c.dim}cached${c.reset}`);
+    console.log(`${c.gray}  │  ${c.cyan}◆${c.reset} ${c.dim}cached: ${contextName}${c.reset}`);
   },
   
   cacheMiss: (contextName: string) => {
-    console.log(`${c.gray}  │  ${c.yellow}○${c.reset} ${c.dim}cache stale, re-healing...${c.reset}`);
+    console.log(`${c.gray}  │  ${c.yellow}○${c.reset} ${c.dim}cache stale for "${contextName}", re-healing...${c.reset}`);
   },
   
   healFailed: (contextName: string, error: string) => {
@@ -86,13 +86,13 @@ export const healLog = {
     console.log();
   },
   
-  aiDetectMode: (action: string, contextName: string) => {
+  aiDetectMode: (_action: string, contextName: string) => {
     console.log(`${c.gray}  │${c.reset}`);
     console.log(`${c.gray}  ├─${c.reset} ${c.purple}◈${c.reset} ${c.dim}AI DETECT${c.reset} ${c.white}${contextName}${c.reset}`);
   },
   
   noValidCandidate: (contextName: string) => {
-    console.log(`${c.gray}  │  ${c.red}↳ no valid candidate found${c.reset}`);
+    console.log(`${c.gray}  │  ${c.red}↳ no valid candidate found for "${contextName}"${c.reset}`);
   },
 
   warn: (message: string) => {
@@ -102,5 +102,9 @@ export const healLog = {
 
   aiDisabled: () => {
     console.log(`${c.yellow}⚠ Set SELF_HEAL=1 or AI_SELF_HEAL=true with AI_API_KEY to enable AI detection${c.reset}`);
+  },
+
+  nativeFallback: (action: string, contextName: string) => {
+    console.log(`${c.dim}  ↳ AI healing disabled — running native Playwright ${action} for "${contextName}"${c.reset}`);
   },
 };

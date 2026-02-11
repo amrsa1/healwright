@@ -1,15 +1,6 @@
-# Healwright - Technical Architecture
+# Healwright — Technical Architecture
 
-## Overview
-
-Healwright is an AI-powered self-healing locator system for Playwright. When a locator fails, it captures a DOM snapshot, asks AI to identify the correct element, validates the suggestion, and caches the healed strategy for future runs.
-
-**Key Features:**
-- Multi-provider support (OpenAI, Anthropic Claude, Google Gemini)
-- Self-healing locators with semantic fallback
-- Chainable `heal.locator()` API for clean syntax
-- Force click support for hover-dependent elements
-- Smart caching to minimize API calls
+> For usage, installation, API reference, and configuration see the [README](readme.md).
 
 ## Architecture Diagram
 
@@ -77,7 +68,7 @@ Healwright is an AI-powered self-healing locator system for Playwright. When a l
 │                                                                              │
 │   ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐            │
 │   │    OpenAI       │   │   Anthropic     │   │     Google      │            │
-│   │  (gpt-4o-mini)  │   │  (claude-sonnet)│   │ (gemini-2.5)    │            │
+│   │  (gpt-5.2)      │   │(claude-sonnet)  │   │ (gemini-3)      │            │
 │   │                 │   │                 │   │                 │            │
 │   │ Aliases: gpt    │   │ Aliases: claude │   │ Aliases: gemini │            │
 │   └─────────────────┘   └─────────────────┘   └─────────────────┘            │
@@ -102,109 +93,32 @@ Healwright is an AI-powered self-healing locator system for Playwright. When a l
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Core Components
-
-### 1. Main API (`src/healwright.ts`)
-
-The library exports two main functions:
-
-```typescript
-import { withHealing, createHealingFixture, HealPage } from 'healwright';
-
-// Option 1: Wrap a page directly
-const healPage = withHealing(page);
-
-// Option 2: Use as a Playwright fixture
-const test = base.extend<{ page: HealPage }>(createHealingFixture());
-```
-
-### 2. HealMethods Interface
-
-Available methods on `page.heal`:
-
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `locator` | `locator(selector, desc): HealingLocator` | Chainable self-healing locator |
-| `click` | `click(loc, desc, opts?): Promise<void>` | Click with optional `{ force: true }` |
-| `fill` | `fill(loc, desc, value): Promise<void>` | Fill input field |
-| `selectOption` | `selectOption(loc, desc, value): Promise<void>` | Select dropdown option |
-| `check` | `check(loc, desc): Promise<void>` | Check checkbox/radio |
-| `dblclick` | `dblclick(loc, desc): Promise<void>` | Double-click |
-| `hover` | `hover(loc, desc): Promise<void>` | Hover over element |
-| `focus` | `focus(loc, desc): Promise<void>` | Focus element |
-| `setTestName` | `setTestName(name): void` | Set test name for cache metadata |
-
-### 3. HealingLocator Interface
-
-Chainable locator with self-healing:
-
-```typescript
-// Returns a HealingLocator that can be chained
-const input = page.heal.locator('.new-todo', 'Input for new todos');
-await input.fill('Buy milk');
-await input.click();
-await input.hover();
-```
-
-### 4. AI Provider Abstraction (`src/providers/`)
+## Source Layout
 
 ```
-src/providers/
-├── types.ts      # AIProvider interface, ProviderName, DEFAULT_MODELS
-├── index.ts      # Factory function and exports
-├── openai.ts     # OpenAI provider implementation
-├── anthropic.ts  # Anthropic Claude provider
-└── google.ts     # Google Gemini provider
+src/
+├── index.ts           # Public exports
+├── healwright.ts      # Main healing logic (withHealing, createHealingFixture)
+├── types.ts           # TypeScript types, Zod schemas, HealError
+├── utils.ts           # buildLocator, collectCandidates, cache I/O
+├── logger.ts          # Console logging with colours
+└── providers/
+    ├── index.ts       # Provider factory
+    ├── types.ts       # AIProvider interface, cleanJson helper
+    ├── openai.ts      # OpenAI implementation
+    ├── anthropic.ts   # Anthropic implementation
+    └── google.ts      # Google Gemini implementation
 ```
 
-**Provider Interface:**
-```typescript
-interface AIProvider {
-  readonly name: ProviderName;
-  generateHealPlan(input: GenerateHealPlanInput): Promise<HealPlanT | null>;
-}
-```
-
-**Supported Providers and Aliases:**
-
-| Provider | Alias | Default Model |
-|----------|-------|---------------|
-| `openai` | `gpt` | `gpt-4o-mini` |
-| `anthropic` | `claude` | `claude-sonnet-4-20250514` |
-| `google` | `gemini` | `gemini-2.5-flash` |
-
-### 5. Strategy Types
-
-The AI can suggest 6 locator strategies:
-
-| Type | Playwright Method | Example |
-|------|------------------|---------|
-| `testid` | `getByTestId()` | `page.getByTestId("submit-btn")` |
-| `role` | `getByRole()` | `page.getByRole("button", { name: "Submit" })` |
-| `label` | `getByLabel()` | `page.getByLabel("Email")` |
-| `placeholder` | `getByPlaceholder()` | `page.getByPlaceholder("Enter email")` |
-| `text` | `getByText()` | `page.getByText("Click here")` |
-| `css` | `locator()` | `page.locator("#submit-btn")` |
-
-### 6. Candidate Collection
+### Candidate Collection
 
 When healing, the system collects potential elements from the DOM:
 
-- **For click actions**: `button, [role='button'], a, input[type='button'], input[type='submit'], [onclick], [role='menuitem'], [role='tab'], [role='combobox'], select`
-- **For fill actions**: `input, textarea, [contenteditable='true'], [role='textbox'], select, [role='combobox']`
+- **Click actions**: `button, [role='button'], a, input[type='button'], input[type='submit'], [onclick], [ondblclick], [onmouseenter], [onmouseover], [role='menuitem'], [role='tab'], [role='treeitem'], [role='switch'], [role='combobox'], select, [data-testid], [data-test], [data-test-id], [data-qa], [data-cy]` and more
+- **Fill actions**: `input, textarea, [contenteditable='true'], [role='textbox'], select, [role='combobox'], [data-testid], ...`
+- **selectOption actions**: `select, [role='listbox'], [role='combobox'], [data-testid], ...`
 
-Each candidate includes:
-- `tag` - HTML tag name
-- `role` - ARIA role
-- `ariaLabel` - aria-label attribute
-- `nameAttr` - name attribute
-- `placeholder` - placeholder attribute
-- `type` - input type
-- `href` - link href
-- `id` - element id
-- `test` - data-testid (with attribute name)
-- `text` - visible text content
-- `visible` - visibility status
+Each candidate is sent as compact JSON with short keys: `tag`, `hid`, `role`, `aria`, `name`, `ph`, `type`, `href`, `alt`, `title`, `for`, `id`, `cls`, `tid`, `txt`.
 
 ## Execution Flow
 
@@ -230,7 +144,7 @@ Each candidate includes:
 
 ### Phase 3: AI Healing
 ```
-1. Collect DOM candidates (max 120 elements)
+1. Collect DOM candidates (max 30 elements, configurable via `maxCandidates`)
 2. Create AI provider based on environment
 3. Send to AI with context:
    - Action type (click/fill)
@@ -247,42 +161,9 @@ Each candidate includes:
 8. Execute action with healed locator
 ```
 
-## Configuration
+## Force Click Internals
 
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SELF_HEAL` | Enable healing (`"1"`) | disabled |
-| `AI_API_KEY` | API key for chosen provider | required |
-| `AI_PROVIDER` | `openai`/`gpt`, `anthropic`/`claude`, `google`/`gemini` | `openai` |
-| `AI_MODEL` | Override default model | provider default |
-
-### HealOptions
-
-```typescript
-interface HealOptions {
-  enabled?: boolean;        // Enable/disable healing
-  provider?: ProviderName;  // AI provider to use
-  model?: string;           // Override default model
-  apiKey?: string;          // API key (or use AI_API_KEY env)
-  cacheFile?: string;       // Default: ".self-heal/healed_locators.json"
-  reportFile?: string;      // Default: ".self-heal/heal_events.jsonl"
-  maxAiTries?: number;      // Max candidates to validate (default: 4)
-  timeout?: number;         // Timeout for healed locators (default: 5000)
-  testName?: string;        // For cache metadata
-}
-```
-
-### ClickOptions
-
-```typescript
-interface ClickOptions {
-  force?: boolean;  // Click hidden elements (hover-dependent)
-}
-```
-
-When `force: true`:
+When `force: true` is passed:
 - Skips visibility check in `pickValid`
 - Skips `waitForReady` before action
 - Uses `dispatchEvent('click')` instead of regular click (works on `display: none`)
@@ -313,105 +194,6 @@ When `force: true`:
 
 ```json
 {"ts":"2026-01-28T20:00:00.000Z","url":"https://todomvc.com/...","key":"click::...","action":"click","contextName":"Submit button","used":"healed","success":true,"confidence":0.95,"why":"Button matches context","strategy":{"type":"role","role":"button","name":"Submit"}}
-```
-
-## Usage Examples
-
-### Basic Usage with Fixture
-
-```typescript
-// fixtures.ts
-import { test as base } from '@playwright/test';
-import { createHealingFixture, HealPage } from 'healwright';
-
-export const test = base.extend<{ page: HealPage }>(createHealingFixture());
-export { expect } from '@playwright/test';
-```
-
-```typescript
-// my.test.ts
-import { test, expect } from './fixtures';
-
-test('login flow', async ({ page }) => {
-  await page.goto('https://example.com');
-  
-  // Chainable self-healing locator
-  await page.heal.locator('.email-input', 'Email input field').fill('user@example.com');
-  
-  // AI-only mode (empty locator)
-  await page.heal.click('', 'Login button');
-  
-  // Regular Playwright still works
-  await expect(page.locator('.dashboard')).toBeVisible();
-});
-```
-
-### Handling Hover-Dependent Elements
-
-```typescript
-test('delete todo', async ({ page }) => {
-  // Hover to reveal delete button
-  await page.heal.hover('', 'Todo item in list');
-  
-  // Force click the hidden button
-  await page.heal.click('', 'Delete button', { force: true });
-});
-```
-
-### Self-Healing Mode (Broken Locators)
-
-```typescript
-test('heal broken locator', async ({ page }) => {
-  // This locator is wrong, but healing will fix it
-  const brokenLocator = page.locator('.wrong-selector');
-  
-  await page.heal.click(brokenLocator, 'Submit button');
-  // AI finds the correct element based on the description
-});
-```
-
-### Running Tests
-
-```bash
-# Normal run (no healing)
-npx playwright test
-
-# With self-healing enabled (OpenAI default)
-SELF_HEAL=1 AI_API_KEY=sk-... npx playwright test
-
-# With Anthropic Claude
-SELF_HEAL=1 AI_PROVIDER=claude AI_API_KEY=sk-ant-... npx playwright test
-
-# With Google Gemini
-SELF_HEAL=1 AI_PROVIDER=gemini AI_API_KEY=... npx playwright test
-```
-
-## File Structure
-
-```
-healwright/
-├── src/
-│   ├── index.ts           # Public exports
-│   ├── healwright.ts      # Main healing logic (withHealing, createHealingFixture)
-│   ├── types.ts           # TypeScript types, Zod schemas, HealError
-│   ├── utils.ts           # Utility functions (buildLocator, collectCandidates)
-│   ├── logger.ts          # Console logging with colors
-│   └── providers/
-│       ├── index.ts       # Provider factory
-│       ├── types.ts       # AIProvider interface
-│       ├── openai.ts      # OpenAI implementation
-│       ├── anthropic.ts   # Anthropic implementation
-│       └── google.ts      # Google Gemini implementation
-├── examples/
-│   └── todomvc.test.ts    # Example tests
-├── docs/
-│   ├── index.html         # GitHub Pages landing
-│   ├── get-started.html   # Getting started guide
-│   └── style.css          # Documentation styles
-├── .self-heal/
-│   ├── healed_locators.json
-│   └── heal_events.jsonl
-└── dist/                  # Built output (ESM + CJS + types)
 ```
 
 ## Console Output
@@ -480,7 +262,7 @@ healwright/
 
 - Requires AI API key and internet connection
 - AI responses add latency (~1-2s per heal)
-- Max 120 candidates collected per heal
+- Max 30 candidates collected per heal (configurable via `maxCandidates`)
 - Cannot heal across iframes (yet)
 - Force click only works with `dispatchEvent` (no pointer coordinates)
 

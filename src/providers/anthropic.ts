@@ -4,7 +4,7 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
-import { AIProvider, AIProviderConfig, GenerateHealPlanInput, DEFAULT_MODELS } from "./types";
+import { AIProvider, AIProviderConfig, GenerateHealPlanInput, DEFAULT_MODELS, cleanJson } from "./types";
 import { HealPlan, HealPlanT } from "../types";
 import { healLog } from "../logger";
 
@@ -40,10 +40,10 @@ export class AnthropicProvider implements AIProvider {
             if (!content) return null;
 
             try {
-                const parsed = typeof content === "string" ? JSON.parse(content) : content;
-                return HealPlan.parse(parsed);
-            } catch {
-                healLog.candidateError("parse", "Failed to parse AI response");
+                const raw = typeof content === "string" ? content : JSON.stringify(content);
+                return HealPlan.parse(JSON.parse(cleanJson(raw)));
+            } catch (parseErr: any) {
+                healLog.candidateError("parse", `Failed to parse AI response: ${parseErr?.message ?? ''}`);
                 return null;
             }
         } catch (aiErr: any) {
