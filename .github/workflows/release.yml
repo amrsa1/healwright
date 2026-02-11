@@ -29,6 +29,12 @@ jobs:
   quality-gate:
     name: Quality Gate
     runs-on: ubuntu-latest
+    environment: gemini
+    env:
+      AI_API_KEY: ${{ secrets.AI_API_KEY }}
+      AI_PROVIDER: ${{ secrets.AI_PROVIDER }}
+      AI_MODEL: ${{ secrets.AI_MODEL }}
+      SELF_HEAL: '1'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
