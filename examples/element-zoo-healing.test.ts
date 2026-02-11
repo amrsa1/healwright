@@ -31,7 +31,7 @@ const logText = (page: HealPage) => page.locator('#log').textContent();
 test.describe('Self-Healing — Click', () => {
   test.beforeEach(async ({ page }) => { await page.goto(FIXTURE); });
 
-  test('heal broken button locator', async ({ page }) => {
+  test.only('heal broken button locator', async ({ page }) => {
     const broken = page.locator('[data-testid="wrong-btn-primary"]');
     await page.heal.click(broken, 'Primary Button');
     expect(await logText(page)).toBe('button clicked');
@@ -113,7 +113,7 @@ test.describe('Self-Healing — Click', () => {
 test.describe('Self-Healing — Fill', () => {
   test.beforeEach(async ({ page }) => { await page.goto(FIXTURE); });
 
-  test('heal broken name input', async ({ page }) => {
+  test.only('heal broken name input', async ({ page }) => {
     const broken = page.locator('#wrong-name-input');
     await page.heal.locator('#wrong-name-input', 'Full name text input field').fill('John Doe');
     await expect(page.locator('[data-testid="input-name"]')).toHaveValue('John Doe');
@@ -165,7 +165,7 @@ test.describe('Self-Healing — Fill', () => {
 test.describe('Self-Healing — Check / Uncheck', () => {
   test.beforeEach(async ({ page }) => { await page.goto(FIXTURE); });
 
-  test('heal broken agree checkbox', async ({ page }) => {
+  test.only('heal broken agree checkbox', async ({ page }) => {
     await page.heal.check(
       page.locator('[data-testid="wrong-agree-cb"]'),
       'I agree to terms checkbox'
@@ -199,7 +199,7 @@ test.describe('Self-Healing — Check / Uncheck', () => {
 test.describe('Self-Healing — Select Option', () => {
   test.beforeEach(async ({ page }) => { await page.goto(FIXTURE); });
 
-  test('heal broken color select', async ({ page }) => {
+  test.only('heal broken color select', async ({ page }) => {
     await page.heal.selectOption(
       page.locator('#nonexistent-color-select'),
       'Color dropdown select',
@@ -418,7 +418,7 @@ test.describe('AI-Only — Fill', () => {
     await expect(page.locator('[data-testid="input-name"]')).toHaveValue('John Doe');
   });
 
-  test('find email input', async ({ page }) => {
+  test.only('find email input', async ({ page }) => {
     await page.heal.fill('', 'Email address input field', 'test@example.com');
     await expect(page.locator('[data-testid="input-email"]')).toHaveValue('test@example.com');
   });
@@ -494,7 +494,7 @@ test.describe('AI-Only — Double Click', () => {
   });
 });
 
-test.describe.only('AI-Only — Hover', () => {
+test.describe('AI-Only — Hover', () => {
   test.beforeEach(async ({ page }) => { await page.goto(FIXTURE); });
 
   test('find hover container to reveal button', async ({ page }) => {
@@ -522,7 +522,7 @@ test.describe('AI-Only — Focus', () => {
   });
 });
 
-test.describe.only('AI-Only — Tabs', () => {
+test.describe('AI-Only — Tabs', () => {
   test.beforeEach(async ({ page }) => { await page.goto(FIXTURE); });
 
   test('find Details tab', async ({ page }) => {
