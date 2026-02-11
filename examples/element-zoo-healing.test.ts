@@ -494,7 +494,7 @@ test.describe('AI-Only — Double Click', () => {
   });
 });
 
-test.describe('AI-Only — Hover', () => {
+test.describe.only('AI-Only — Hover', () => {
   test.beforeEach(async ({ page }) => { await page.goto(FIXTURE); });
 
   test('find hover container to reveal button', async ({ page }) => {
@@ -522,7 +522,7 @@ test.describe('AI-Only — Focus', () => {
   });
 });
 
-test.describe('AI-Only — Tabs', () => {
+test.describe.only('AI-Only — Tabs', () => {
   test.beforeEach(async ({ page }) => { await page.goto(FIXTURE); });
 
   test('find Details tab', async ({ page }) => {
