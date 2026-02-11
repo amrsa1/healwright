@@ -112,6 +112,7 @@ All methods take a locator (or empty string for AI-only) and a description:
 | `heal.fill(locator, desc, value)` | Fill an input |
 | `heal.selectOption(locator, desc, value)` | Select from dropdown |
 | `heal.check(locator, desc)` | Check a checkbox |
+| `heal.uncheck(locator, desc)` | Uncheck a checkbox |
 | `heal.dblclick(locator, desc)` | Double-click |
 | `heal.hover(locator, desc)` | Hover over element |
 | `heal.focus(locator, desc)` | Focus element |
@@ -178,9 +179,42 @@ Pick the approach that makes sense for each action. Maybe you use healing for th
 | `AI_MODEL` | Override the default model (optional) |
 
 **Default models by provider:**
-- **OpenAI:** `gpt-4o-mini`
-- **Anthropic:** `claude-sonnet-4-20250514`
-- **Google:** `gemini-2.5-flash`
+- **OpenAI:** `gpt-5.2`
+- **Anthropic:** `claude-sonnet-4-5`
+- **Google:** `gemini-3-flash`
+
+### Fixture Options
+
+You can pass options when creating the healing fixture:
+
+```typescript
+const test = base.extend<{ page: HealPage }>(createHealingFixture({
+  maxCandidates: 30,  // Max DOM elements sent to AI (default: 30)
+  maxAiTries: 4,      // Max AI strategies to validate (default: 4)
+  timeout: 5000,      // Locator timeout in ms (default: 5000)
+  provider: 'openai', // AI provider (default: 'openai')
+  model: 'gpt-5.2',   // Override default model
+}));
+```
+
+### Token Optimization
+
+Healwright is designed to minimize AI token consumption and keep costs low:
+
+- **Compact candidates** — Only non-null attributes are sent. Null/empty fields are stripped, and short keys are used (`tid` instead of `data-testid`, `txt` instead of `text`, etc.)
+- **Invisible elements filtered** — Hidden elements (`display: none`, `visibility: hidden`, zero-size) are excluded before sending to the AI
+- **Capped output** — The AI is asked to return a maximum of 3 strategies per request
+- **Configurable limit** — Control how many DOM elements are analyzed with `maxCandidates`
+
+Lower `maxCandidates` = fewer tokens = lower cost and faster responses. The default of 30 works well for most pages. For complex pages with many interactive elements, you can increase it:
+
+```typescript
+// Simple pages — fewer candidates, faster & cheaper
+createHealingFixture({ maxCandidates: 15 })
+
+// Complex pages — more candidates, better accuracy
+createHealingFixture({ maxCandidates: 50 })
+```
 
 ### Cache
 
@@ -229,6 +263,15 @@ test('checkout flow', async ({ page }) => {
   await page.heal.click('', 'Place order button');
 });
 ```
+
+## Privacy & Security
+
+When healing is triggered, healwright sends a **DOM snapshot** of candidate elements (tag names, roles, aria labels, text content, test IDs, etc.) to the configured AI provider's API. **No screenshots or full page HTML are sent** — only a structured list of relevant elements.
+
+Keep this in mind if your application contains sensitive data in the DOM (e.g., PII, financial data, internal URLs). You can:
+- Use a self-hosted or on-premise LLM by configuring a custom `AI_MODEL` and API endpoint
+- Limit healing to non-production environments
+- Review the candidate data sent via the `.self-heal/heal_events.jsonl` log
 
 ## Development
 

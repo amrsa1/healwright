@@ -22,6 +22,9 @@
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "test": "SELF_HEAL=1 npx playwright test",
     "test:headed": "SELF_HEAL=1 npx playwright test --headed",
+    "test:unit": "vitest run",
+    "test:heal": "SELF_HEAL=1 npx playwright test examples/element-zoo-healing.test.ts",
+    "test:ci": "npm run test:unit && npm run test:heal",
     "lint": "eslint src/",
     "prepublishOnly": "npm run build"
   },
@@ -57,17 +60,19 @@
     "@playwright/test": ">=1.40.0"
   },
   "dependencies": {
-    "openai": "^6.16.0",
-    "@anthropic-ai/sdk": "^0.39.0",
-    "@google/genai": "^0.11.0",
+    "@anthropic-ai/sdk": "^0.74.0",
+    "@google/genai": "^1.40.0",
+    "openai": "^6.21.0",
+    "playwright-core": ">=1.40.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.0",
-    "@types/node": "^25.0.10",
-    "dotenv": "^17.2.3",
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^25.2.3",
+    "dotenv": "^17.2.4",
     "tsup": "^8.5.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   },
   "engines": {
     "node": ">=18.0.0"

@@ -8,6 +8,7 @@ dist/
 .self-heal/
 
 # Playwright
+.playwright-mcp/
 playwright-report/
 test-results/
 playwright/.cache/
@@ -36,3 +37,5 @@ coverage/
 
 # Misc
 *.tgz
+
+architecture.md

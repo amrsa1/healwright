@@ -4,7 +4,7 @@
  */
 
 import { GoogleGenAI } from "@google/genai";
-import { AIProvider, AIProviderConfig, GenerateHealPlanInput, DEFAULT_MODELS } from "./types";
+import { AIProvider, AIProviderConfig, GenerateHealPlanInput, DEFAULT_MODELS, cleanJson } from "./types";
 import { HealPlan, HealPlanT } from "../types";
 import { healLog } from "../logger";
 
@@ -37,9 +37,9 @@ export class GoogleProvider implements AIProvider {
             if (!content) return null;
 
             try {
-                return HealPlan.parse(JSON.parse(content));
-            } catch {
-                healLog.candidateError("parse", "Failed to parse AI response");
+                return HealPlan.parse(JSON.parse(cleanJson(content)));
+            } catch (parseErr: any) {
+                healLog.candidateError("parse", `Failed to parse AI response: ${parseErr?.message ?? ''}`);
                 return null;
             }
         } catch (aiErr: any) {

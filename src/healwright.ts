@@ -2,7 +2,7 @@
  * healwright - AI-powered self-healing locators for Playwright
  */
 
-import { Page, Locator } from "@playwright/test";
+import type { Page, Locator } from "playwright-core";
 import path from "node:path";
 
 import { createAIProvider, AIProvider, ProviderName } from "./providers";
@@ -32,6 +32,7 @@ import {
   writeAtomic,
   appendLog,
   cacheKey,
+  withRetry,
 } from "./utils";
 
 // Symbol to identify enhanced pages
@@ -70,13 +71,13 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
   const cacheFile = opts?.cacheFile ?? path.join(process.cwd(), ".self-heal", "healed_locators.json");
   const reportFile = opts?.reportFile ?? path.join(process.cwd(), ".self-heal", "heal_events.jsonl");
   const maxAiTries = opts?.maxAiTries ?? 4;
+  const maxCandidates = opts?.maxCandidates ?? 80;
   const timeout = opts?.timeout ?? 5000;
   const quickTimeout = enabled ? 1000 : timeout;
 
   // State
   let currentTestName = opts?.testName;
   let bannerShownForTest: string | undefined;
-  let aiDisabledWarningShown = false;
   const mem = new Map<string, StrategyT>();
   let diskCacheLoaded = false;
   let diskCache: CacheT = {};
@@ -109,24 +110,30 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
   async function askAI(action: Action, contextName: string): Promise<AskAIResult> {
     if (!aiProvider) throw new Error("Healing disabled or API key not set");
 
-    const candidates = await collectCandidates(page, action);
+    const candidates = await collectCandidates(page, action, maxCandidates);
     healLog.askingAI(contextName, candidates.length);
 
     const systemPrompt = [
-      "You are a Playwright locator expert.",
-      "Use contextName to identify the intended element from the candidates list.",
-      "Return robust strategies ranked by preference: testid > role+name > label > placeholder > text > css.",
-      "Avoid XPath and brittle selectors.",
-      "Prefer strategies that match a single visible element.",
+      "You are a Playwright locator expert. Given a list of candidate elements from the page, identify the one matching contextName.",
+      "Return up to 3 strategy alternatives. Prefer: testid > role+name > label > placeholder > text > altText > title > css.",
+      "Candidate keys: tag=tagName, tid=data-testid, aria=aria-label, ph=placeholder, txt=innerText, alt=alt, title=title, for=htmlFor, cls=className, hid=hidden. id/name/role/type/href as named.",
+      "Strategy types: testid(value=testid), role(role+name, exact optional), label(text), placeholder(text), text(text, exact optional), altText(text), title(text), css(selector). No XPath.",
+      "IMPORTANT: For label/placeholder/text/altText/title strategies, the 'text' field is REQUIRED and must be the actual text/label/placeholder value.",
+      "For testid strategy, the 'value' field is REQUIRED. For css, the 'selector' field is REQUIRED. For role, the 'role' field is REQUIRED.",
+      "Elements with hid:true may be CSS-hidden inputs (opacity:0) or offscreen — they are still valid targets if they match contextName.",
     ].join("\n");
 
     const userContent = JSON.stringify({ url: page.url(), action, contextName, candidates });
 
-    const plan = await aiProvider.generateHealPlan({
-      systemPrompt,
-      userContent,
-      jsonSchema: healPlanJsonSchema,
-    });
+    const plan = await withRetry(
+      () => aiProvider!.generateHealPlan({
+        systemPrompt,
+        userContent,
+        jsonSchema: healPlanJsonSchema,
+      }),
+      2, // 2 retries (3 total attempts)
+      1000,
+    );
 
     return { plan, candidatesAnalyzed: candidates.length };
   }
@@ -205,6 +212,7 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     const ts = new Date().toISOString();
     const key = cacheKey(page, action, contextName);
     const aiOnlyMode = !isValidLocator(target);
+    let originalError: Error | null = null;
 
     // Try original locator first
     if (!aiOnlyMode) {
@@ -212,19 +220,18 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
         await waitForReady(target as Locator, action, quickTimeout);
         await performAction(target as Locator);
         return;
-      } catch (originalErr: any) {
-        if (!enabled) throw originalErr;
+      } catch (err: any) {
+        if (!enabled) throw err;
+        originalError = err;
       }
     }
 
-    // AI healing flow
-    const originalErr = aiOnlyMode ? new Error(`AI detect mode for: ${contextName}`) : null;
+    // AI healing flow — when disabled, fall back to native Playwright behavior
     if (!enabled && aiOnlyMode) {
-      // Show warning once when AI is not available
-      if (!aiDisabledWarningShown) {
-        healLog.aiDisabled();
-        aiDisabledWarningShown = true;
-      }
+      healLog.nativeFallback(action, contextName);
+      const selector = typeof target === 'string' ? target : '';
+      const nativeLoc = page.locator(selector);
+      await performAction(nativeLoc);
       return;
     }
 
@@ -244,7 +251,7 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
         const cachedLoc = buildLocator(page, cached);
         await waitForReady(cachedLoc, action, timeout);
         await performAction(cachedLoc);
-        if (action === "click" || action === "dblclick") await waitForStable(page);
+      if (action === "click" || action === "dblclick" || action === "selectOption") await waitForStable(page);
         await log({ ts, url: page.url(), key, action, contextName, used: "cache", success: true, strategy: cached });
         healLog.usedCache(contextName);
         return;
@@ -270,6 +277,7 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
           url: page.url(),
           candidatesAnalyzed,
           strategiesTried: [],
+          originalError: originalError?.message,
         });
       }
 
@@ -286,6 +294,7 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
           url: page.url(),
           candidatesAnalyzed,
           strategiesTried,
+          originalError: originalError?.message,
         });
       }
 
@@ -297,7 +306,7 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
         await waitForReady(healedLoc, action, timeout);
       }
       await performAction(healedLoc);
-      if (action === "click" || action === "dblclick") await waitForStable(page);
+      if (action === "click" || action === "dblclick" || action === "selectOption") await waitForStable(page);
 
       await log({
         ts, url: page.url(), key, action, contextName,
@@ -332,6 +341,7 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
         url: page.url(),
         candidatesAnalyzed,
         strategiesTried,
+        originalError: originalError?.message,
       });
     }
   }
@@ -354,7 +364,7 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     ),
 
     selectOption: (target, contextName, value) => healAction(
-      "click", target, contextName,
+      "selectOption", target, contextName,
       async (loc) => { await loc.selectOption(value, { timeout }); }
     ),
 
@@ -370,6 +380,12 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
       { aiAction: "fill" } // Use fill candidates for check (inputs)
     ),
 
+    uncheck: (target, contextName) => healAction(
+      "uncheck", target, contextName,
+      (loc) => loc.uncheck({ timeout }),
+      { aiAction: "fill" } // Use fill candidates for uncheck (inputs)
+    ),
+
     hover: (target, contextName) => healAction(
       "hover", target, contextName,
       (loc) => loc.hover({ timeout }),
@@ -379,7 +395,7 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     focus: (target, contextName) => healAction(
       "focus", target, contextName,
       (loc) => loc.focus({ timeout }),
-      { aiAction: "fill" } // Use fill candidates for focus
+      { aiAction: "click" } // Use click candidates — focusable elements include buttons, divs, etc.
     ),
 
     setTestName: (name) => { currentTestName = name; },
@@ -392,6 +408,7 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
         fill: (value) => healMethods.fill(baseLoc, contextName, value),
         dblclick: () => healMethods.dblclick(baseLoc, contextName),
         check: () => healMethods.check(baseLoc, contextName),
+        uncheck: () => healMethods.uncheck(baseLoc, contextName),
         hover: () => healMethods.hover(baseLoc, contextName),
         focus: () => healMethods.focus(baseLoc, contextName),
         selectOption: (value) => healMethods.selectOption(baseLoc, contextName, value),

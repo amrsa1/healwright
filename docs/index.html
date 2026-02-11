@@ -29,6 +29,7 @@
             <div class="nav-links">
                 <a href="#features">Features</a>
                 <a href="#how-it-works">How it Works</a>
+                <a href="#demo">Demo</a>
                 <a href="https://github.com/amrsa1/healwright" class="btn btn-secondary"><i data-lucide="github"></i>
                     GitHub</a>
                 <a href="get-started.html" class="btn btn-primary">Get Started</a>
@@ -92,19 +93,19 @@
         </div>
     </header>
 
-    <div class="promo-bar fade-in-section">
+    <div class="promo-bar">
         <div class="container promo-content">
-            <div class="promo-item">
-                <i data-lucide="check-circle" style="color: var(--accent);"></i>
-                <span>No more broken locators</span>
+            <div class="promo-item" style="--d:0">
+                <span class="promo-icon"><i data-lucide="check-circle"></i></span>
+                <span class="promo-text">No more broken locators</span>
             </div>
-            <div class="promo-item">
-                <i data-lucide="check-circle" style="color: var(--accent);"></i>
-                <span>No more flaky tests</span>
+            <div class="promo-item" style="--d:1">
+                <span class="promo-icon"><i data-lucide="check-circle"></i></span>
+                <span class="promo-text">No more flaky tests</span>
             </div>
-            <div class="promo-item">
-                <i data-lucide="check-circle" style="color: var(--accent);"></i>
-                <span>No more time to waste</span>
+            <div class="promo-item" style="--d:2">
+                <span class="promo-icon"><i data-lucide="check-circle"></i></span>
+                <span class="promo-text">No more time to waste</span>
             </div>
         </div>
     </div>
@@ -162,80 +163,84 @@
         </div>
     </section>
 
-    <section class="providers">
+    <section id="how-it-works" class="how-it-works">
         <div class="container">
-            <h2 class="section-title">Supported <span class="gradient-text">AI Providers</span></h2>
-            <p style="color: var(--text-muted); max-width: 600px; margin: 0 auto;">
-                Don't get locked in. Choose the model that works best for your team and budget.
-            </p>
-            <div class="provider-grid">
-                <!-- OpenAI -->
-                <div class="provider-card">
-                    <svg class="provider-icon" viewBox="0 0 24 24" fill="currentColor"
-                        xmlns="http://www.w3.org/2000/svg">
-                        <path
-                            d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z" />
-                    </svg>
-                    <span class="provider-name">OpenAI</span>
+            <h2 class="section-title">How It <span class="gradient-text">Works</span></h2>
+            <p class="section-subtitle">Your locator breaks — Healwright fixes it automatically.</p>
+
+            <!-- Animated Pipeline -->
+            <div class="pipeline" id="pipeline">
+
+                <!-- Step 1 -->
+                <div class="pipe-step" style="--i:0">
+                    <div class="pipe-icon pipe-icon--blue"><i data-lucide="play"></i></div>
+                    <div class="pipe-body">
+                        <h3>Test Runs</h3>
+                        <p>Your test calls an action — <code>click</code>, <code>fill</code>, <code>hover</code>, etc.
+                           Healwright tries the original locator first. If it works, the test continues with <span class="txt-green">zero overhead</span>.</p>
+                    </div>
                 </div>
 
-                <!-- Anthropic -->
-                <div class="provider-card">
-                    <svg class="provider-icon" viewBox="0 0 24 24" fill="currentColor"
-                        xmlns="http://www.w3.org/2000/svg">
-                        <path
-                            d="M17.3041 3.541h-3.6718l6.696 16.918H24Zm-10.6082 0L0 20.459h3.7442l1.3693-3.5527h7.0052l1.3693 3.5528h3.7442L10.5363 3.5409Zm-.3712 10.2232 2.2914-5.9456 2.2914 5.9456Z" />
-                    </svg>
-                    <span class="provider-name">Anthropic</span>
+                <!-- Step 2 -->
+                <div class="pipe-step" style="--i:1">
+                    <div class="pipe-icon pipe-icon--amber"><i data-lucide="search-x"></i></div>
+                    <div class="pipe-body">
+                        <h3>Locator Breaks</h3>
+                        <p>When the locator can't find the element, the healing pipeline kicks in.
+                           A local cache is checked first — if the element was healed before, it's reused instantly.</p>
+                    </div>
                 </div>
 
-                <!-- Google Gemini -->
-                <div class="provider-card">
-                    <svg class="provider-icon" viewBox="0 0 24 24" fill="currentColor"
-                        xmlns="http://www.w3.org/2000/svg">
-                        <path
-                            d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81" />
-                    </svg>
-                    <span class="provider-name">Gemini</span>
+                <!-- Step 3 -->
+                <div class="pipe-step" style="--i:2">
+                    <div class="pipe-icon pipe-icon--purple"><i data-lucide="brain"></i>
+                        <span class="ai-ring"></span>
+                    </div>
+                    <div class="pipe-body">
+                        <h3>AI Finds the Element</h3>
+                        <p>DOM candidates are sent to your AI provider. It returns the best matching locator strategy, which is validated to ensure it resolves to exactly one visible element.</p>
+                        <div class="provider-row">
+                            <span class="provider-chip">OpenAI</span>
+                            <span class="provider-chip">Claude</span>
+                            <span class="provider-chip">Gemini</span>
+                        </div>
+                        <div class="strategy-row">
+                            <span class="strat-chip">testid</span>
+                            <span class="strat-chip">role</span>
+                            <span class="strat-chip">label</span>
+                            <span class="strat-chip">placeholder</span>
+                            <span class="strat-chip">text</span>
+                            <span class="strat-chip">css</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4 -->
+                <div class="pipe-step pipe-step--final" style="--i:3">
+                    <div class="pipe-icon pipe-icon--green"><i data-lucide="circle-check"></i></div>
+                    <div class="pipe-body">
+                        <h3>Healed & Cached</h3>
+                        <p>The action executes with the healed locator and the strategy is cached to disk.
+                           Future runs skip AI entirely — your CI stays <span class="txt-green">green</span>.</p>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <section id="how-it-works" class="how-it-works">
+    <section id="demo" class="demo-section">
         <div class="container">
-            <h2 class="section-title">How It <span class="gradient-text">Works</span></h2>
-            <div class="steps-timeline">
-                <div class="step-item">
-                    <div class="step-number">01</div>
-                    <div class="step-content">
-                        <h3>Try First</h3>
-                        <p>Your original locator runs with a quick timeout. If it works, we're done—zero overhead.</p>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-number">02</div>
-                    <div class="step-content">
-                        <h3>Collect & Analyze</h3>
-                        <p>On failure, Healwright gathers DOM candidates and sends them to AI along with your intent
-                            description.</p>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-number">03</div>
-                    <div class="step-content">
-                        <h3>Validate</h3>
-                        <p>AI returns ranked strategies (testid, role, label). Each is validated until one matches a
-                            single visible element.</p>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-number">04</div>
-                    <div class="step-content">
-                        <h3>Cache & Reuse</h3>
-                        <p>The working selector is cached locally. Subsequent runs skip the AI entirely.</p>
-                    </div>
-                </div>
+            <h2 class="section-title">See It in <span class="gradient-text">Action</span></h2>
+            <p class="section-subtitle">Watch healwright detect and fix broken locators in real time.</p>
+            <div class="video-wrapper">
+                <iframe
+                    src="https://www.youtube.com/embed/OHRGmOAtjW8"
+                    title="Healwright Demo — AI Self-Healing in Action"
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowfullscreen
+                    loading="lazy">
+                </iframe>
             </div>
         </div>
     </section>
@@ -252,10 +257,11 @@
                 <p>Built for the modern web automation tests.</p>
             </div>
             <div class="footer-links">
-                <a href="#">Documentation</a>
-                <a href="#">GitHub</a>
-                <a href="#">NPM</a>
-                <a href="#">License</a>
+                <a href="get-started.html">Documentation</a>
+                <a href="https://github.com/amrsa1/healwright" target="_blank" rel="noopener noreferrer">GitHub</a>
+                <a href="https://www.npmjs.com/package/healwright" target="_blank" rel="noopener noreferrer">NPM</a>
+                <a href="https://github.com/amrsa1/healwright/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">License</a>
+                <a href="https://amr-salem.com" target="_blank" rel="noopener noreferrer">Contact</a>
             </div>
         </div>
         <div class="container copyright">
@@ -266,19 +272,35 @@
     <script>
         lucide.createIcons();
 
-        // Simple intersection observer for fade-in animations
+        // Intersection observer for fade-in animations
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     entry.target.classList.add('visible');
                 }
             });
-        });
+        }, { threshold: 0.15 });
 
-        document.querySelectorAll('.feature-card, .step-item, .promo-bar').forEach((el) => {
+        document.querySelectorAll('.feature-card, .promo-bar').forEach((el) => {
             el.classList.add('fade-in-section');
             observer.observe(el);
         });
+
+        // Re-trigger pipeline step animations when scrolled into view
+        const pipelineObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.querySelectorAll('.pipe-step').forEach(step => {
+                        step.style.animation = 'none';
+                        void step.offsetHeight;
+                        step.style.animation = '';
+                    });
+                }
+            });
+        }, { threshold: 0.2 });
+
+        const pipeline = document.getElementById('pipeline');
+        if (pipeline) pipelineObserver.observe(pipeline);
     </script>
 </body>
 
