@@ -1,6 +1,6 @@
 {
   "name": "healwright",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "description": "AI-powered self-healing locators for Playwright. When locators fail, AI automatically finds the correct element.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -50,7 +50,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/amrsa1/healwright"
+    "url": "git+https://github.com/amrsa1/healwright.git"
   },
   "bugs": {
     "url": "https://github.com/amrsa1/healwright/issues"
