@@ -267,8 +267,8 @@ test('checkout flow', async ({ page }) => {
 ## Live Demo
 
 <div align="center">
-  <a href="https://www.youtube.com/watch?v=OHRGmOAtjW8">
-    <img src="https://img.youtube.com/vi/OHRGmOAtjW8/0.jpg" alt="healwright Demo Video" width="600"/>
+  <a href="https://youtu.be/qyHSG0K99i4">
+    <img src="https://img.youtube.com/vi/qyHSG0K99i4/0.jpg" alt="healwright Demo Video" width="600"/>
   </a>
   <p><em>▶ Click to watch the demo on YouTube</em></p>
 </div>
