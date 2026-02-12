@@ -266,6 +266,13 @@ test('checkout flow', async ({ page }) => {
 
 ## Live Demo
 
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=OHRGmOAtjW8">
+    <img src="https://img.youtube.com/vi/OHRGmOAtjW8/maxresdefault.jpg" alt="healwright Demo Video" width="600"/>
+  </a>
+  <p><em>▶ Click to watch the demo on YouTube</em></p>
+</div>
+
 Want to see healwright in action without touching your own project? Check out the **[`test-published`](https://github.com/amrsa1/healwright/tree/test-published)** branch — a standalone mini-project that imports the published npm package and runs tests with intentionally broken selectors.
 
 ```bash
