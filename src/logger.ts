@@ -43,7 +43,7 @@ export const healLog = {
   },
   
   actionFailed: (action: string, contextName: string) => {
-    console.log(`${c.gray}  │${c.reset}`);
+    console.log(`${c.gray}  ┌${'─'.repeat(50)}${c.reset}`);
     console.log(`${c.gray}  ├─${c.reset} ${c.yellow}⚡${c.reset} ${c.dim}${action.toUpperCase()}${c.reset} ${c.white}${contextName}${c.reset}`);
   },
   
@@ -87,7 +87,7 @@ export const healLog = {
   },
   
   aiDetectMode: (_action: string, contextName: string) => {
-    console.log(`${c.gray}  │${c.reset}`);
+    console.log(`${c.gray}  ┌${'─'.repeat(50)}${c.reset}`);
     console.log(`${c.gray}  ├─${c.reset} ${c.purple}◈${c.reset} ${c.dim}AI DETECT${c.reset} ${c.white}${contextName}${c.reset}`);
   },
   

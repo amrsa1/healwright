@@ -55,6 +55,9 @@ jobs:
       - name: E2E smoke tests
         run: npm run test:heal
 
+      - name: E2E smoke tests (cached run)
+        run: npm run test:heal
+
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4
