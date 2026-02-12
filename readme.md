@@ -264,6 +264,22 @@ test('checkout flow', async ({ page }) => {
 });
 ```
 
+## Live Demo
+
+Want to see healwright in action without touching your own project? Check out the **[`test-published`](https://github.com/amrsa1/healwright/tree/test-published)** branch — a standalone mini-project that imports the published npm package and runs tests with intentionally broken selectors.
+
+```bash
+git clone -b test-published https://github.com/amrsa1/healwright.git healwright-demo
+cd healwright-demo
+npm install && npx playwright install chromium
+cp example.env .env   # add your API key
+npm test
+```
+
+It includes two smoke tests:
+- **Broken locator** — uses a wrong selector (`#wrong-todo-input`), AI heals it to the real input
+- **AI-only mode** — no selector at all, AI finds the element from a plain-English description
+
 ## Privacy & Security
 
 When healing is triggered, healwright sends a **DOM snapshot** of candidate elements (tag names, roles, aria labels, text content, test IDs, etc.) to the configured AI provider's API. **No screenshots or full page HTML are sent** — only a structured list of relevant elements.
