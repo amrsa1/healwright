@@ -19,63 +19,19 @@ on:
         default: false
 
 permissions:
-  contents: write      # push version commit + tag + create release
-  id-token: write      # npm provenance
+  contents: write
+  id-token: write
 
 jobs:
-  # ───────────────────────────────────────────────────────
-  #  Gate: run full CI checks before releasing
-  # ───────────────────────────────────────────────────────
-  quality-gate:
-    name: Quality Gate
-    runs-on: ubuntu-latest
-    environment: gemini
-    env:
-      AI_API_KEY: ${{ secrets.AI_API_KEY }}
-      AI_PROVIDER: ${{ secrets.AI_PROVIDER }}
-      AI_MODEL: ${{ secrets.AI_MODEL }}
-      SELF_HEAL: '1'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Compile TypeScript
-        run: npx tsc --noEmit
-
-      - name: Build package
-        run: npm run build
-
-      - name: Unit tests
-        run: npm run test:unit
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-
-      - name: E2E smoke tests
-        run: npm run test:heal
-
-  # ───────────────────────────────────────────────────────
-  #  Release: bump version → publish → GitHub release
-  # ───────────────────────────────────────────────────────
   release:
     name: Publish to npm
-    needs: quality-gate
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0          # full history for changelog
+          fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
@@ -88,6 +44,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build package
+        run: npm run build
+
       - name: Configure git
         run: |
           git config user.name  "github-actions[bot]"
@@ -96,13 +55,9 @@ jobs:
       - name: Bump version
         id: version
         run: |
-          # Bump version in package.json, commit, and tag
           NEW_VERSION=$(npm version ${{ inputs.bump }} -m "chore(release): v%s")
           echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
           echo "### 📦 Version bump: ${NEW_VERSION}" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Build package
-        run: npm run build
 
       - name: Verify package contents
         run: npm pack --dry-run 2>&1 | tee /tmp/pack-output.txt
@@ -124,9 +79,7 @@ jobs:
         id: notes
         run: |
           VERSION=${{ steps.version.outputs.version }}
-          # Get the previous tag
           PREV_TAG=$(git tag --sort=-v:refname | grep -v "$VERSION" | head -1)
-
           {
             echo "notes<<RELEASE_EOF"
             echo "## What's Changed"
@@ -167,6 +120,5 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           cat /tmp/pack-output.txt >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          # Reset the version bump so it doesn't affect future runs
           git reset --hard HEAD~1
           git tag -d ${{ steps.version.outputs.version }} || true

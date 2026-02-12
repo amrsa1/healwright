@@ -14,7 +14,6 @@ jobs:
   build-and-test:
     name: Build & Test
     runs-on: ubuntu-latest
-    environment: gemini
     env:
       AI_API_KEY: ${{ secrets.AI_API_KEY }}
       AI_PROVIDER: ${{ secrets.AI_PROVIDER }}
