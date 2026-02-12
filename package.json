@@ -1,80 +1,14 @@
 {
-  "name": "healwright",
+  "name": "healwright-test",
+  "private": true,
   "version": "1.0.0",
-  "description": "AI-powered self-healing locators for Playwright. When locators fail, AI automatically finds the correct element.",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
-    }
-  },
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
-    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "test": "SELF_HEAL=1 npx playwright test",
-    "test:headed": "SELF_HEAL=1 npx playwright test --headed",
-    "test:unit": "vitest run",
-    "test:heal": "SELF_HEAL=1 npx playwright test examples/element-zoo-healing.test.ts",
-    "test:ci": "npm run test:unit && npm run test:heal",
-    "lint": "eslint src/",
-    "prepublishOnly": "npm run build"
-  },
-  "keywords": [
-    "playwright",
-    "testing",
-    "automation",
-    "self-healing",
-    "ai",
-    "locators",
-    "e2e",
-    "end-to-end",
-    "web-testing",
-    "resilient-tests",
-    "gpt",
-    "openai",
-    "anthropic",
-    "claude",
-    "gemini",
-    "google"
-  ],
-  "author": "Amr Salem",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/amrsa1/healwright.git"
-  },
-  "bugs": {
-    "url": "https://github.com/amrsa1/healwright/issues"
-  },
-  "homepage": "https://github.com/amrsa1/healwright#readme",
-  "peerDependencies": {
-    "@playwright/test": ">=1.40.0"
+    "test:headed": "SELF_HEAL=1 npx playwright test --headed"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.74.0",
-    "@google/genai": "^1.40.0",
-    "openai": "^6.21.0",
-    "playwright-core": ">=1.40.0",
-    "zod": "^4.3.6"
-  },
-  "devDependencies": {
-    "@playwright/test": "^1.58.2",
-    "@types/node": "^25.2.3",
+    "@playwright/test": "^1.52.0",
     "dotenv": "^17.2.4",
-    "tsup": "^8.5.1",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.18"
-  },
-  "engines": {
-    "node": ">=18.0.0"
+    "healwright": "latest"
   }
 }

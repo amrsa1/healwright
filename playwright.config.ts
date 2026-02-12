@@ -1,27 +1,18 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig } from '@playwright/test';
 import dotenv from 'dotenv';
 
-dotenv.config({ quiet: true });
+dotenv.config();
 
 export default defineConfig({
-  testDir: './examples',
+  testDir: './tests',
   fullyParallel: true,
-  retries: process.env.CI ? 2 : 0,
+  retries: 2,
   workers: 1,
-  reporter: [
-    ['list'],
-    ['html', { open: 'never' }]
-  ],
-  timeout: 60000,
+  reporter: [['list']],
   use: {
-    baseURL: 'https://todomvc.com',
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
+    headless: true,
   },
   projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
+    { name: 'chromium', use: { browserName: 'chromium' } },
   ],
 });

@@ -1,41 +1,8 @@
-# Dependencies
 node_modules/
-
-# Build output
-dist/
-
-# Healwright cache
 .self-heal/
-
-# Playwright
-.playwright-mcp/
-playwright-report/
 test-results/
-playwright/.cache/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Env files
+playwright-report/
 .env
-.env.local
-.env.*.local
-
-# Logs
-*.log
-npm-debug.log*
-
-# Coverage
-coverage/
-
-# Misc
-*.tgz
-
-architecture.md
+.DS_Store
+.vscode/
+package-lock.json
