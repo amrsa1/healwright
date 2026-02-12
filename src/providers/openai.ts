@@ -19,7 +19,6 @@ export class OpenAIProvider implements AIProvider {
     }
 
     async generateHealPlan(input: GenerateHealPlanInput): Promise<HealPlanT | null> {
-        console.log("Using OpenAI Provider with model:", this.model);
         try {
             const resp = await (this.client as any).responses.create({
                 model: this.model,
