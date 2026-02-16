@@ -4,8 +4,8 @@
  */
 
 import OpenAI from "openai";
-import { AIProvider, AIProviderConfig, GenerateHealPlanInput, DEFAULT_MODELS, cleanJson } from "./types";
-import { HealPlan, HealPlanT } from "../types";
+import { AIProvider, AIProviderConfig, GenerateHealPlanInput, HealPlanResult, DEFAULT_MODELS, cleanJson } from "./types";
+import { HealPlan } from "../types";
 import { healLog } from "../logger";
 
 export class OpenAIProvider implements AIProvider {
@@ -18,7 +18,7 @@ export class OpenAIProvider implements AIProvider {
         this.model = config.model ?? DEFAULT_MODELS.openai;
     }
 
-    async generateHealPlan(input: GenerateHealPlanInput): Promise<HealPlanT | null> {
+    async generateHealPlan(input: GenerateHealPlanInput): Promise<HealPlanResult> {
         try {
             const resp = await (this.client as any).responses.create({
                 model: this.model,
@@ -41,13 +41,21 @@ export class OpenAIProvider implements AIProvider {
             const content = resp.output_text;
             healLog.aiResponse(content?.length ?? 0);
 
-            if (!content) return null;
+            // Extract token usage from OpenAI response
+            const usage = resp.usage;
+            const tokenUsage = usage ? {
+                inputTokens: usage.input_tokens ?? usage.prompt_tokens ?? 0,
+                outputTokens: usage.output_tokens ?? usage.completion_tokens ?? 0,
+                totalTokens: (usage.input_tokens ?? usage.prompt_tokens ?? 0) + (usage.output_tokens ?? usage.completion_tokens ?? 0),
+            } : null;
+
+            if (!content) return { plan: null, tokenUsage };
 
             try {
-                return HealPlan.parse(JSON.parse(cleanJson(content)));
+                return { plan: HealPlan.parse(JSON.parse(cleanJson(content))), tokenUsage };
             } catch (parseErr: any) {
                 healLog.candidateError("parse", `Failed to parse AI response: ${parseErr?.message ?? ''}`);
-                return null;
+                return { plan: null, tokenUsage };
             }
         } catch (aiErr: any) {
             healLog.candidateError("api", aiErr?.message ?? String(aiErr));

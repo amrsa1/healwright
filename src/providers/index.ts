@@ -27,6 +27,6 @@ export function createAIProvider(
     }
 }
 
-export type { AIProvider, AIProviderConfig, ProviderName } from "./types";
+export type { AIProvider, AIProviderConfig, ProviderName, TokenUsage, HealPlanResult } from "./types";
 export { DEFAULT_MODELS } from "./types";
 

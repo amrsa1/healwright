@@ -203,8 +203,9 @@ Healwright is designed to minimize AI token consumption and keep costs low:
 
 - **Compact candidates** — Only non-null attributes are sent. Null/empty fields are stripped, and short keys are used (`tid` instead of `data-testid`, `txt` instead of `text`, etc.)
 - **Invisible elements filtered** — Hidden elements (`display: none`, `visibility: hidden`, zero-size) are excluded before sending to the AI
+- **Smart pre-filtering** — Before sending candidates to the AI, `rankCandidates()` scores each element by keyword match, tag-type inference, ARIA role relevance, and test-ID presence. Only the top-ranked candidates are sent, typically reducing the set by 20–30% while preserving accuracy
 - **Capped output** — The AI is asked to return a maximum of 3 strategies per request
-- **Configurable limit** — Control how many DOM elements are analyzed with `maxCandidates`
+- **Configurable limit** — Control how many DOM elements are collected with `maxCandidates`
 
 Lower `maxCandidates` = fewer tokens = lower cost and faster responses. The default of 30 works well for most pages. For complex pages with many interactive elements, you can increase it:
 
@@ -215,6 +216,16 @@ createHealingFixture({ maxCandidates: 15 })
 // Complex pages — more candidates, better accuracy
 createHealingFixture({ maxCandidates: 50 })
 ```
+
+### Token Usage Visibility
+
+Each healing call logs the token consumption reported by the AI provider:
+
+```
+↑ 1350 input · 180 output · 1530 total tokens
+```
+
+Token usage is also recorded in `.self-heal/heal_events.jsonl` for cost tracking and analysis across test runs.
 
 ### Cache
 

@@ -4,8 +4,8 @@
  */
 
 import { GoogleGenAI } from "@google/genai";
-import { AIProvider, AIProviderConfig, GenerateHealPlanInput, DEFAULT_MODELS, cleanJson } from "./types";
-import { HealPlan, HealPlanT } from "../types";
+import { AIProvider, AIProviderConfig, GenerateHealPlanInput, HealPlanResult, DEFAULT_MODELS, cleanJson } from "./types";
+import { HealPlan } from "../types";
 import { healLog } from "../logger";
 
 export class GoogleProvider implements AIProvider {
@@ -18,7 +18,7 @@ export class GoogleProvider implements AIProvider {
         this.model = config.model ?? DEFAULT_MODELS.google;
     }
 
-    async generateHealPlan(input: GenerateHealPlanInput): Promise<HealPlanT | null> {
+    async generateHealPlan(input: GenerateHealPlanInput): Promise<HealPlanResult> {
         try {
             // Combined prompt for Gemini (system + user)
             const combinedPrompt = `${input.systemPrompt}\n\n---\n\n${input.userContent}\n\nRespond with valid JSON matching this schema:\n${JSON.stringify(input.jsonSchema, null, 2)}`;
@@ -34,13 +34,23 @@ export class GoogleProvider implements AIProvider {
             const content = response.text;
             healLog.aiResponse(content?.length ?? 0);
 
-            if (!content) return null;
+            // Extract token usage from Gemini response
+            // Note: totalTokenCount may include thinking/reasoning tokens,
+            // so we compute total from input + output for accuracy
+            const usage = (response as any).usageMetadata;
+            const tokenUsage = usage ? {
+                inputTokens: usage.promptTokenCount ?? 0,
+                outputTokens: usage.candidatesTokenCount ?? 0,
+                totalTokens: (usage.promptTokenCount ?? 0) + (usage.candidatesTokenCount ?? 0),
+            } : null;
+
+            if (!content) return { plan: null, tokenUsage };
 
             try {
-                return HealPlan.parse(JSON.parse(cleanJson(content)));
+                return { plan: HealPlan.parse(JSON.parse(cleanJson(content))), tokenUsage };
             } catch (parseErr: any) {
                 healLog.candidateError("parse", `Failed to parse AI response: ${parseErr?.message ?? ''}`);
-                return null;
+                return { plan: null, tokenUsage };
             }
         } catch (aiErr: any) {
             healLog.candidateError("api", aiErr?.message ?? String(aiErr));

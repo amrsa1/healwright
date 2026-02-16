@@ -5,7 +5,7 @@
 import type { Page, Locator } from "playwright-core";
 import path from "node:path";
 
-import { createAIProvider, AIProvider, ProviderName } from "./providers";
+import { createAIProvider, AIProvider, ProviderName, TokenUsage } from "./providers";
 
 import { healLog } from "./logger";
 import {
@@ -28,6 +28,7 @@ import {
   waitForReady,
   waitForStable,
   collectCandidates,
+  rankCandidates,
   readJson,
   writeAtomic,
   appendLog,
@@ -105,13 +106,15 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
   interface AskAIResult {
     plan: import("./types").HealPlanT | null;
     candidatesAnalyzed: number;
+    tokenUsage: TokenUsage | null;
   }
 
   async function askAI(action: Action, contextName: string): Promise<AskAIResult> {
     if (!aiProvider) throw new Error("Healing disabled or API key not set");
 
-    const candidates = await collectCandidates(page, action, maxCandidates);
-    healLog.askingAI(contextName, candidates.length);
+    const allCandidates = await collectCandidates(page, action, maxCandidates);
+    const candidates = rankCandidates(allCandidates, contextName, Math.min(maxCandidates, 40));
+    healLog.askingAI(contextName, candidates.length, allCandidates.length);
 
     const systemPrompt = [
       "You are a Playwright locator expert. Given a list of candidate elements from the page, identify the one matching contextName.",
@@ -125,7 +128,7 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
 
     const userContent = JSON.stringify({ url: page.url(), action, contextName, candidates });
 
-    const plan = await withRetry(
+    const result = await withRetry(
       () => aiProvider!.generateHealPlan({
         systemPrompt,
         userContent,
@@ -135,7 +138,7 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
       1000,
     );
 
-    return { plan, candidatesAnalyzed: candidates.length };
+    return { plan: result.plan, candidatesAnalyzed: candidates.length, tokenUsage: result.tokenUsage };
   }
 
   interface PickResult {
@@ -263,14 +266,17 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     // Ask AI
     let candidatesAnalyzed = 0;
     let strategiesTried: Array<{ type: string; reason: string }> = [];
+    let tokenUsage: TokenUsage | null = null;
 
     try {
       const aiResult = await askAI(options?.aiAction ?? action, contextName);
       candidatesAnalyzed = aiResult.candidatesAnalyzed;
+      tokenUsage = aiResult.tokenUsage;
 
       if (!aiResult.plan) {
-        await log({ ts, url: page.url(), key, action, contextName, used: "healed", success: false, error: "AI returned no plan" });
+        await log({ ts, url: page.url(), key, action, contextName, used: "healed", success: false, error: "AI returned no plan", tokenUsage });
         healLog.noValidCandidate(contextName);
+        if (tokenUsage) healLog.tokenUsage(tokenUsage.inputTokens, tokenUsage.outputTokens, tokenUsage.totalTokens);
         throw new HealError("AI returned no suggestions", {
           action,
           contextName,
@@ -286,8 +292,9 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
       const choice = pickResult.choice;
 
       if (!choice) {
-        await log({ ts, url: page.url(), key, action, contextName, used: "healed", success: false, error: "No valid candidate" });
+        await log({ ts, url: page.url(), key, action, contextName, used: "healed", success: false, error: "No valid candidate", tokenUsage });
         healLog.noValidCandidate(contextName);
+        if (tokenUsage) healLog.tokenUsage(tokenUsage.inputTokens, tokenUsage.outputTokens, tokenUsage.totalTokens);
         throw new HealError("Could not find a matching element", {
           action,
           contextName,
@@ -313,8 +320,10 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
         used: "healed", success: true,
         confidence: choice.confidence, why: choice.why,
         strategy: choice.strategy,
+        tokenUsage,
       });
       healLog.healed(contextName, choice.strategy);
+      if (tokenUsage) healLog.tokenUsage(tokenUsage.inputTokens, tokenUsage.outputTokens, tokenUsage.totalTokens);
     } catch (healErr: any) {
       // If it's already a HealError, just re-throw it
       if (healErr instanceof HealError) {
