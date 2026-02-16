@@ -100,11 +100,11 @@ src/
 ├── index.ts           # Public exports
 ├── healwright.ts      # Main healing logic (withHealing, createHealingFixture)
 ├── types.ts           # TypeScript types, Zod schemas, HealError
-├── utils.ts           # buildLocator, collectCandidates, cache I/O
-├── logger.ts          # Console logging with colours
+├── utils.ts           # buildLocator, collectCandidates, rankCandidates, cache I/O
+├── logger.ts          # Console logging with colours and token usage
 └── providers/
     ├── index.ts       # Provider factory
-    ├── types.ts       # AIProvider interface, cleanJson helper
+    ├── types.ts       # AIProvider interface, TokenUsage/HealPlanResult types, cleanJson helper
     ├── openai.ts      # OpenAI implementation
     ├── anthropic.ts   # Anthropic implementation
     └── google.ts      # Google Gemini implementation
@@ -144,21 +144,27 @@ Each candidate is sent as compact JSON with short keys: `tag`, `hid`, `role`, `a
 
 ### Phase 3: AI Healing
 ```
-1. Collect DOM candidates (max 30 elements, configurable via `maxCandidates`)
-2. Create AI provider based on environment
-3. Send to AI with context:
+1. Collect DOM candidates (max elements configurable via `maxCandidates`)
+2. Pre-filter with rankCandidates():
+   - Score each candidate by keyword match, tag-type inference,
+     ARIA role relevance, test-ID presence
+   - Keep top 40 candidates (sorted by score, DOM-order tiebreak)
+   - Log "analyzing N elements (filtered from M)" when filtering occurs
+3. Create AI provider based on environment
+4. Send filtered candidates to AI with context:
    - Action type (click/fill)
    - Context name ("Submit button")
    - Candidate list with attributes
    - JSON schema for structured output
-4. AI returns ranked strategies with confidence scores
-5. Validate each candidate (pickValid):
+5. AI returns ranked strategies with confidence scores
+6. Extract token usage from provider response (input/output/total)
+7. Validate each candidate (pickValid):
    - Build locator from strategy
    - Check count === 1
    - Check isVisible() === true (unless force: true)
-6. Use first valid candidate
-7. Save to cache (memory + disk)
-8. Execute action with healed locator
+8. Use first valid candidate
+9. Save to cache (memory + disk)
+10. Log token usage and execute action with healed locator
 ```
 
 ## Force Click Internals
@@ -193,15 +199,16 @@ When `force: true` is passed:
 ### `heal_events.jsonl`
 
 ```json
-{"ts":"2026-01-28T20:00:00.000Z","url":"https://todomvc.com/...","key":"click::...","action":"click","contextName":"Submit button","used":"healed","success":true,"confidence":0.95,"why":"Button matches context","strategy":{"type":"role","role":"button","name":"Submit"}}
+{"ts":"2026-01-28T20:00:00.000Z","url":"https://todomvc.com/...","key":"click::...","action":"click","contextName":"Submit button","used":"healed","success":true,"confidence":0.95,"why":"Button matches context","strategy":{"type":"role","role":"button","name":"Submit"},"tokenUsage":{"inputTokens":1350,"outputTokens":180,"totalTokens":1530}}
 ```
 
 ## Console Output
 
 ```
 ┌─ ◈ AI DETECT Submit button
-│  ⬡ analyzing 16 elements...
+│  ⬡ analyzing 16 elements (filtered from 24)...
 │  ↳ received 892 chars
+│  ↑ 1350 input · 180 output · 1530 total tokens
 │
 └─ ✓ Submit button
    → getByRole("button", { name: "Submit" })
@@ -229,6 +236,8 @@ When `force: true` is passed:
 | Cache staleness detection | Re-heal only when DOM changes |
 | Structured output (JSON schema) | More reliable AI responses |
 | `dispatchEvent` for force click | Works on `display: none` elements |
+| `rankCandidates()` pre-filtering | ~20-30% fewer tokens sent to AI |
+| Token usage tracking | Per-heal visibility in console & JSONL log |
 
 ## Best Practices
 
@@ -262,7 +271,7 @@ When `force: true` is passed:
 
 - Requires AI API key and internet connection
 - AI responses add latency (~1-2s per heal)
-- Max 30 candidates collected per heal (configurable via `maxCandidates`)
+- Candidates are collected then pre-filtered to top 40 by relevance score (configurable via `maxCandidates`)
 - Cannot heal across iframes (yet)
 - Force click only works with `dispatchEvent` (no pointer coordinates)
 

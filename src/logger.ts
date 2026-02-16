@@ -47,8 +47,11 @@ export const healLog = {
     console.log(`${c.gray}  ├─${c.reset} ${c.yellow}⚡${c.reset} ${c.dim}${action.toUpperCase()}${c.reset} ${c.white}${contextName}${c.reset}`);
   },
   
-  askingAI: (_contextName: string, candidateCount: number) => {
-    console.log(`${c.gray}  │  ${c.purple}⬡${c.reset} ${c.dim}analyzing ${candidateCount} elements...${c.reset}`);
+  askingAI: (_contextName: string, candidateCount: number, totalCollected?: number) => {
+    const filtered = totalCollected && totalCollected > candidateCount
+      ? ` ${c.dim}(filtered from ${totalCollected})${c.reset}`
+      : '';
+    console.log(`${c.gray}  │  ${c.purple}⬡${c.reset} ${c.dim}analyzing ${candidateCount} elements...${c.reset}${filtered}`);
   },
   
   aiResponse: (length: number) => {
@@ -68,6 +71,10 @@ export const healLog = {
     console.log(`${c.gray}  │${c.reset}`);
     console.log(`${c.gray}  └─${c.reset} ${c.green}✓${c.reset} ${c.bold}${c.white}${contextName}${c.reset}`);
     console.log(`${c.gray}     ${c.dim}→ ${strategyStr}${c.reset}`);
+  },
+
+  tokenUsage: (input: number, output: number, total: number) => {
+    console.log(`${c.gray}     ${c.dim}↑ ${c.cyan}${input}${c.dim} input · ${c.cyan}${output}${c.dim} output · ${c.bold}${c.cyan}${total}${c.dim} total tokens${c.reset}`);
     console.log();
   },
   
