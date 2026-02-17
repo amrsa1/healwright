@@ -166,6 +166,16 @@ export interface HealOptions {
   timeout?: number;
   testName?: string;
   apiKey?: string;
+  /**
+   * When true, write a unified diff file (.self-heal/code_updates.diff) after
+   * each successful healing showing how to update the test source code with
+   * the healed locator.  Apply with `git apply .self-heal/code_updates.diff`.
+   *
+   * Defaults to the value of the `HEAL_CODE_DIFF` env variable, or false.
+   */
+  codeDiff?: boolean;
+  /** Override the path for the generated diff file. */
+  diffFile?: string;
 }
 
 // JSON schema for structured output — compact, only required fields per strategy type

@@ -35,6 +35,7 @@ import {
   cacheKey,
   withRetry,
 } from "./utils";
+import { DiffCollector, captureCallSite } from "./codediff";
 
 // Symbol to identify enhanced pages
 const HEAL_SYMBOL = Symbol.for('healwright');
@@ -80,6 +81,8 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
   const maxCandidates = opts?.maxCandidates ?? 80;
   const timeout = opts?.timeout ?? 5000;
   const quickTimeout = enabled ? 1000 : timeout;
+  const codeDiffEnabled = opts?.codeDiff ?? process.env.HEAL_CODE_DIFF === "1";
+  const diffCollector = codeDiffEnabled ? new DiffCollector(opts?.diffFile) : null;
 
   // State
   let currentTestName = opts?.testName;
@@ -217,6 +220,10 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     performAction: (loc: Locator) => Promise<void>,
     options?: HealActionOptions
   ): Promise<void> {
+    // Capture call site synchronously before any await — the stack is
+    // only meaningful at the point of the original call.
+    const callSite = diffCollector ? captureCallSite() : null;
+
     const ts = new Date().toISOString();
     const key = cacheKey(page, action, contextName);
     const aiOnlyMode = !isValidLocator(target);
@@ -329,6 +336,14 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
       });
       healLog.healed(contextName, choice.strategy);
       if (tokenUsage) healLog.tokenUsage(tokenUsage.inputTokens, tokenUsage.outputTokens, tokenUsage.totalTokens);
+
+      // Generate code diff showing how to update the test source
+      if (diffCollector) {
+        const update = await diffCollector.record(action, contextName, choice.strategy, callSite);
+        if (update) {
+          healLog.codeDiff(update.testFile, update.line, update.suggestedLocator, diffCollector.getDiffFile());
+        }
+      }
     } catch (healErr: any) {
       // If it's already a HealError, just re-throw it
       if (healErr instanceof HealError) {

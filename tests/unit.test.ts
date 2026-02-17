@@ -8,6 +8,7 @@ import {
   withRetry,
 } from '../src/utils';
 import { formatStrategy } from '../src/logger';
+import { strategyToPlaywrightCode, findFirstArgExtent } from '../src/codediff';
 import type { StrategyT } from '../src/types';
 
 // ---------- isValidLocator ----------
@@ -296,5 +297,113 @@ describe('withRetry', () => {
     const fn = vi.fn().mockRejectedValue({ status: 429, message: 'rate limit' });
     await expect(withRetry(fn, 1, 10)).rejects.toEqual({ status: 429, message: 'rate limit' });
     expect(fn).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ---------- strategyToPlaywrightCode ----------
+
+describe('strategyToPlaywrightCode', () => {
+  it('converts testid strategy', () => {
+    expect(strategyToPlaywrightCode({ type: 'testid', value: 'submit-btn' }))
+      .toBe('page.getByTestId("submit-btn")');
+  });
+
+  it('converts role strategy with name', () => {
+    expect(strategyToPlaywrightCode({ type: 'role', role: 'button', name: 'Submit' }))
+      .toBe('page.getByRole("button", { name: "Submit" })');
+  });
+
+  it('converts role strategy without name', () => {
+    expect(strategyToPlaywrightCode({ type: 'role', role: 'link' }))
+      .toBe('page.getByRole("link")');
+  });
+
+  it('converts role strategy with exact', () => {
+    expect(strategyToPlaywrightCode({ type: 'role', role: 'button', name: 'OK', exact: true }))
+      .toBe('page.getByRole("button", { name: "OK", exact: true })');
+  });
+
+  it('converts label strategy', () => {
+    expect(strategyToPlaywrightCode({ type: 'label', text: 'Email' }))
+      .toBe('page.getByLabel("Email")');
+  });
+
+  it('converts placeholder strategy', () => {
+    expect(strategyToPlaywrightCode({ type: 'placeholder', text: 'Search...' }))
+      .toBe('page.getByPlaceholder("Search...")');
+  });
+
+  it('converts text strategy', () => {
+    expect(strategyToPlaywrightCode({ type: 'text', text: 'Hello World' }))
+      .toBe('page.getByText("Hello World")');
+  });
+
+  it('converts altText strategy', () => {
+    expect(strategyToPlaywrightCode({ type: 'altText', text: 'Logo' }))
+      .toBe('page.getByAltText("Logo")');
+  });
+
+  it('converts title strategy', () => {
+    expect(strategyToPlaywrightCode({ type: 'title', text: 'Close' }))
+      .toBe('page.getByTitle("Close")');
+  });
+
+  it('converts css strategy', () => {
+    expect(strategyToPlaywrightCode({ type: 'css', selector: '.btn-primary' }))
+      .toBe('page.locator(".btn-primary")');
+  });
+
+  it('escapes quotes in values', () => {
+    expect(strategyToPlaywrightCode({ type: 'text', text: 'Say "hello"' }))
+      .toBe('page.getByText("Say \\"hello\\"")');
+  });
+});
+
+// ---------- findFirstArgExtent ----------
+
+describe('findFirstArgExtent', () => {
+  it('finds first arg in heal.click with locator', () => {
+    const line = `  await page.heal.click(page.locator('#old'), 'Submit');`;
+    const extent = findFirstArgExtent(line);
+    expect(extent).not.toBeNull();
+    const [start, end] = extent!;
+    expect(line.slice(start, end)).toBe("page.locator('#old')");
+  });
+
+  it('finds first arg in heal.fill with locator', () => {
+    const line = `  await page.heal.fill(page.locator('.input'), 'Email', 'test@example.com');`;
+    const extent = findFirstArgExtent(line);
+    expect(extent).not.toBeNull();
+    const [start, end] = extent!;
+    expect(line.slice(start, end)).toBe("page.locator('.input')");
+  });
+
+  it('finds first arg in heal.click with getByRole', () => {
+    const line = `  await page.heal.click(page.getByRole('button', { name: 'Submit' }), 'Submit button');`;
+    const extent = findFirstArgExtent(line);
+    expect(extent).not.toBeNull();
+    const [start, end] = extent!;
+    expect(line.slice(start, end)).toBe("page.getByRole('button', { name: 'Submit' })");
+  });
+
+  it('finds empty string arg in AI-only mode', () => {
+    const line = `  await page.heal.click('', 'Submit button');`;
+    const extent = findFirstArgExtent(line);
+    expect(extent).not.toBeNull();
+    const [start, end] = extent!;
+    expect(line.slice(start, end)).toBe("''");
+  });
+
+  it('returns null for non-heal lines', () => {
+    const line = `  await page.locator('#btn').click();`;
+    expect(findFirstArgExtent(line)).toBeNull();
+  });
+
+  it('handles heal.locator with string selector', () => {
+    const line = `  const btn = page.heal.locator('.broken-selector', 'Submit');`;
+    const extent = findFirstArgExtent(line);
+    expect(extent).not.toBeNull();
+    const [start, end] = extent!;
+    expect(line.slice(start, end)).toBe("'.broken-selector'");
   });
 });

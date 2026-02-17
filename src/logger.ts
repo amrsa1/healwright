@@ -119,4 +119,11 @@ export const healLog = {
   nativeFallback: (action: string, contextName: string) => {
     console.log(`${c.dim}  ↳ AI healing disabled — running native Playwright ${action} for "${contextName}"${c.reset}`);
   },
+
+  codeDiff: (file: string, line: number, newLocator: string, diffFile: string) => {
+    const rel = file.includes('/') ? file.split('/').slice(-2).join('/') : file;
+    console.log(`${c.gray}  ├─${c.reset} ${c.blue}↻${c.reset} ${c.dim}update ${rel}:${line}${c.reset}`);
+    console.log(`${c.gray}  │  ${c.dim}→ ${newLocator}${c.reset}`);
+    console.log(`${c.gray}  │  ${c.dim}diff: ${diffFile}${c.reset}`);
+  },
 };

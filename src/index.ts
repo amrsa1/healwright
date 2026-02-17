@@ -12,3 +12,5 @@ export type { HealPage, HealMethods, HealOptions, HealErrorContext, ClickOptions
 export { HealError } from './types';
 export type { ProviderName, AIProvider } from './providers';
 export { DEFAULT_MODELS } from './providers';
+export { strategyToPlaywrightCode, DiffCollector } from './codediff';
+export type { CodeUpdate } from './codediff';
