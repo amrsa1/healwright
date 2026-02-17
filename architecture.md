@@ -72,6 +72,14 @@
 │   │                 │   │                 │   │                 │            │
 │   │ Aliases: gpt    │   │ Aliases: claude │   │ Aliases: gemini │            │
 │   └─────────────────┘   └─────────────────┘   └─────────────────┘            │
+│                                                                              │
+│   ┌─────────────────────────────────────────────────────────────┐            │
+│   │    Local (Ollama)                                          │            │
+│   │    Default: qwen3:4b · No API key · Fully offline          │            │
+│   │                                                            │            │
+│   │    Aliases: local, ollama                                  │            │
+│   │    Host: OLLAMA_HOST or http://127.0.0.1:11434             │            │
+│   └─────────────────────────────────────────────────────────────┘            │
 │              │                   │                    │                      │
 │              └───────────────────┼────────────────────┘                      │
 │                                  ▼                                           │
@@ -107,7 +115,8 @@ src/
     ├── types.ts       # AIProvider interface, TokenUsage/HealPlanResult types, cleanJson helper
     ├── openai.ts      # OpenAI implementation
     ├── anthropic.ts   # Anthropic implementation
-    └── google.ts      # Google Gemini implementation
+    ├── google.ts      # Google Gemini implementation
+    └── local.ts       # Local LLM via Ollama (no API key needed)
 ```
 
 ### Candidate Collection
@@ -269,11 +278,12 @@ When `force: true` is passed:
 
 ## Limitations
 
-- Requires AI API key and internet connection
-- AI responses add latency (~1-2s per heal)
+- Cloud providers require AI API key and internet connection (local provider needs neither)
+- AI responses add latency (~1-2s per heal with cloud, varies with local hardware)
 - Candidates are collected then pre-filtered to top 40 by relevance score (configurable via `maxCandidates`)
 - Cannot heal across iframes (yet)
 - Force click only works with `dispatchEvent` (no pointer coordinates)
+- Local models may produce less accurate results than cloud providers depending on model size
 
 ## Error Handling
 

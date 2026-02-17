@@ -390,10 +390,10 @@ h1 {
 
 .provider-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 1.5rem;
     margin-top: 3rem;
-    max-width: 1000px;
+    max-width: 900px;
     margin-left: auto;
     margin-right: auto;
 }
@@ -495,6 +495,39 @@ h1 {
     color: #4285f4;
     transform: scale(1.1);
     filter: drop-shadow(0 0 12px rgba(66, 133, 244, 0.4));
+}
+
+/* Ollama (Local) */
+.provider-card:nth-child(4):hover {
+    border-color: rgba(251, 146, 60, 0.3);
+    box-shadow: 0 10px 30px -10px rgba(251, 146, 60, 0.15);
+}
+
+.provider-card:nth-child(4):hover .provider-icon {
+    color: #fb923c;
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 12px rgba(251, 146, 60, 0.4));
+}
+
+/* Provider Badge (e.g. "Local LLM") */
+.provider-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.6rem;
+    border-radius: 100px;
+    background: rgba(251, 146, 60, 0.1);
+    border: 1px solid rgba(251, 146, 60, 0.25);
+    color: #fb923c;
+    z-index: 1;
+}
+
+/* Local chip variant in pipeline */
+.provider-chip--local {
+    background: rgba(251, 146, 60, 0.08);
+    border-color: rgba(251, 146, 60, 0.2);
+    color: #fb923c;
 }
 
 /* How It Works */

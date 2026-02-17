@@ -44,7 +44,9 @@
     "anthropic",
     "claude",
     "gemini",
-    "google"
+    "google",
+    "ollama",
+    "local-llm"
   ],
   "author": "Amr Salem",
   "license": "MIT",
@@ -62,6 +64,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
     "@google/genai": "^1.40.0",
+    "ollama": "^0.6.3",
     "openai": "^6.21.0",
     "playwright-core": ">=1.40.0",
     "zod": "^4.3.6"

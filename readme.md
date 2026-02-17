@@ -19,6 +19,8 @@ Healwright fixes this. It wraps your Playwright page with AI-powered healing tha
 
 - **Self-healing locators** - When a selector breaks, AI analyzes the page and finds the right element
 - **AI-only mode** - Just describe the element, no selector needed
+- **Multi-provider** - OpenAI, Anthropic, Google, or run locally with Ollama — your choice
+- **Local LLM support** - Run completely offline with Ollama. No API keys, no cloud, full privacy
 - **Caching** - Healed selectors are saved so you don't burn API calls on every run
 - **Drop-in** - Works with your existing Playwright setup
 
@@ -46,6 +48,12 @@ export SELF_HEAL=1
 export AI_PROVIDER=google
 export AI_API_KEY="your-google-key"
 export SELF_HEAL=1
+
+# Local LLM via Ollama — no API key, no cloud, fully offline!
+export AI_PROVIDER=local
+export SELF_HEAL=1
+# Optional: pick a different model (default: qwen3:4b)
+# export AI_MODEL="qwen3:8b"
 ```
 
 Create a fixture:
@@ -175,13 +183,15 @@ Pick the approach that makes sense for each action. Maybe you use healing for th
 |----------|-------------|
 | `SELF_HEAL` | Set to `1` to enable healing |
 | `AI_API_KEY` | Your AI provider API key |
-| `AI_PROVIDER` | `openai`/`gpt`, `anthropic`/`claude`, or `google`/`gemini` |
+| `AI_PROVIDER` | `openai`/`gpt`, `anthropic`/`claude`, `google`/`gemini`, or `local`/`ollama` |
 | `AI_MODEL` | Override the default model (optional) |
+| `OLLAMA_HOST` | Ollama server URL (default: `http://127.0.0.1:11434`) |
 
 **Default models by provider:**
 - **OpenAI:** `gpt-5.2`
 - **Anthropic:** `claude-sonnet-4-5`
 - **Google:** `gemini-3-flash`
+- **Local (Ollama):** `qwen3:4b`
 
 ### Fixture Options
 
@@ -303,9 +313,47 @@ It includes two smoke tests:
 When healing is triggered, healwright sends a **DOM snapshot** of candidate elements (tag names, roles, aria labels, text content, test IDs, etc.) to the configured AI provider's API. **No screenshots or full page HTML are sent** — only a structured list of relevant elements.
 
 Keep this in mind if your application contains sensitive data in the DOM (e.g., PII, financial data, internal URLs). You can:
+- **Use a local LLM** with `AI_PROVIDER=local` — data never leaves your machine
 - Use a self-hosted or on-premise LLM by configuring a custom `AI_MODEL` and API endpoint
 - Limit healing to non-production environments
 - Review the candidate data sent via the `.self-heal/heal_events.jsonl` log
+
+### Local LLM with Ollama
+
+For maximum privacy and zero cost, run healing entirely on your machine with [Ollama](https://ollama.com):
+
+```bash
+# 1. Install Ollama (https://ollama.com) and pull a model
+ollama pull qwen3:4b
+
+# 2. Configure healwright
+export AI_PROVIDER=local
+export SELF_HEAL=1
+```
+
+That's it — no API keys, no cloud calls, no usage fees. Ollama runs the model locally and healwright talks to it directly.
+
+**Recommended models for healing** (sorted by size):
+
+| Model | Size | Context | Good for |
+|-------|------|---------|----------|
+| `qwen3:4b` ⭐ | 2.5 GB | 256K | Best balance of speed, size, and accuracy. Default choice |
+| `qwen3:8b` | 5.2 GB | 40K | Stronger reasoning when 4b isn't accurate enough |
+| `qwen3:14b` | 9.3 GB | 40K | High accuracy for complex pages |
+| `deepseek-r1:8b` | 4.9 GB | 128K | Strong reasoning, good JSON output |
+| `mistral` | 4.1 GB | 128K | Fast and reliable, well-tested |
+
+You can use **any model** from the [Ollama library](https://ollama.com/library) — just set `AI_MODEL`:
+
+```bash
+export AI_MODEL=qwen3:8b   # or mistral, deepseek-r1:8b, phi4, etc.
+```
+
+Custom Ollama host (e.g., running on another machine):
+
+```bash
+export OLLAMA_HOST=http://192.168.1.100:11434
+```
 
 ## Development
 

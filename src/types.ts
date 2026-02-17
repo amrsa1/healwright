@@ -157,7 +157,7 @@ export interface HealPage extends Page {
 
 export interface HealOptions {
   enabled?: boolean;
-  provider?: "openai" | "gpt" | "anthropic" | "claude" | "google" | "gemini";
+  provider?: "openai" | "gpt" | "anthropic" | "claude" | "google" | "gemini" | "local" | "ollama";
   model?: string;
   cacheFile?: string;
   reportFile?: string;
