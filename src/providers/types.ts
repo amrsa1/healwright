@@ -108,6 +108,6 @@ export const DEFAULT_MODELS: Record<ProviderName, string> = {
     claude: "claude-sonnet-4-20250514",
     google: "gemini-2.5-flash",
     gemini: "gemini-2.5-flash",
-    local: "qwen3:4b",
-    ollama: "qwen3:4b",
+    local: "gemma3:4b",
+    ollama: "gemma3:4b",
 };

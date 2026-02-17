@@ -52,8 +52,8 @@ export SELF_HEAL=1
 # Local LLM via Ollama — no API key, no cloud, fully offline!
 export AI_PROVIDER=local
 export SELF_HEAL=1
-# Optional: pick a different model (default: qwen3:4b)
-# export AI_MODEL="qwen3:8b"
+# Optional: pick a different model (default: gemma3:4b)
+# export AI_MODEL="mistral"
 ```
 
 Create a fixture:
@@ -191,7 +191,7 @@ Pick the approach that makes sense for each action. Maybe you use healing for th
 - **OpenAI:** `gpt-5.2`
 - **Anthropic:** `claude-sonnet-4-5`
 - **Google:** `gemini-3-flash`
-- **Local (Ollama):** `qwen3:4b`
+- **Local (Ollama):** `gemma3:4b`
 
 ### Fixture Options
 
@@ -324,7 +324,7 @@ For maximum privacy and zero cost, run healing entirely on your machine with [Ol
 
 ```bash
 # 1. Install Ollama (https://ollama.com) and pull a model
-ollama pull qwen3:4b
+ollama pull gemma3:4b
 
 # 2. Configure healwright
 export AI_PROVIDER=local
@@ -335,18 +335,20 @@ That's it — no API keys, no cloud calls, no usage fees. Ollama runs the model 
 
 **Recommended models for healing** (sorted by size):
 
-| Model | Size | Context | Good for |
-|-------|------|---------|----------|
-| `qwen3:4b` ⭐ | 2.5 GB | 256K | Best balance of speed, size, and accuracy. Default choice |
-| `qwen3:8b` | 5.2 GB | 40K | Stronger reasoning when 4b isn't accurate enough |
-| `qwen3:14b` | 9.3 GB | 40K | High accuracy for complex pages |
-| `deepseek-r1:8b` | 4.9 GB | 128K | Strong reasoning, good JSON output |
-| `mistral` | 4.1 GB | 128K | Fast and reliable, well-tested |
+| Model | Size | Context | Tested | Good for |
+|-------|------|---------|--------|----------|
+| `llama3.2:3b` ⭐ | 2.0 GB | 128K | 5/5 pass | Best overall choice — fast, accurate, and lightweight |
+| `mistral` ⭐ | 4.1 GB | 128K | 5/5 pass | Most accurate response, but slowest (~1.4 min per run) |
+| `gemma3:4b` | 3.3 GB | 128K | 4/5 pass | Faster than mistral (~53s), but slightly less accurate |
+
+> **Best results were achieved with `mistral`, `gemma3:4b`, and `llama3.2:3b`** — these three models consistently produced the most accurate healing across our test suite. `llama3.2:3b` stands out as the best overall choice, combining top accuracy with a small footprint. We recommend starting with one of them.
+
+> **Tip:** Small models (1B–4B) may struggle with ambiguous elements (e.g. multiple checkboxes on the same page). If accuracy matters more than speed, use `mistral` or a larger model.
 
 You can use **any model** from the [Ollama library](https://ollama.com/library) — just set `AI_MODEL`:
 
 ```bash
-export AI_MODEL=qwen3:8b   # or mistral, deepseek-r1:8b, phi4, etc.
+export AI_MODEL=llama3.2:3b   #or mistral, etc.
 ```
 
 Custom Ollama host (e.g., running on another machine):

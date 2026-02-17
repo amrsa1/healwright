@@ -2,7 +2,7 @@
  * Local LLM Provider (Ollama)
  * Connects to a locally running Ollama instance for completely private,
  * offline AI healing — no API keys or cloud calls needed.
- * Default model: qwen3:4b (2.5 GB, 256K context, tools + thinking support)
+ * Default model: gemma3:4b (3.3 GB, 128K context, excellent accuracy-to-size ratio)
  */
 
 import { Ollama } from "ollama";
@@ -81,26 +81,15 @@ export class LocalProvider implements AIProvider {
             // Build the Ollama format schema for structured output
             const formatSchema = input.jsonSchema ?? "json";
 
-            // Augment the system prompt with an explicit JSON example
-            // so smaller models have a concrete target structure
-            const augmentedPrompt = [
-                input.systemPrompt,
-                "",
-                "You MUST respond with ONLY valid JSON. No markdown, no triple-backticks.",
-                "Use this EXACT structure:",
-                '{"candidates":[{"strategy":{"type":"testid","value":"submit-btn","selector":null,"role":null,"name":null,"text":null,"exact":null},"confidence":0.95,"why":"matches data-testid"}]}',
-                "strategy.type must be one of: testid, role, label, placeholder, text, altText, title, css.",
-                "The 'confidence' field is a number between 0 and 1. The 'why' field explains WHY this element matches.",
-            ].join("\n");
-
             const resp = await this.client.chat({
                 model: this.model,
                 messages: [
-                    { role: "system", content: augmentedPrompt },
+                    { role: "system", content: input.systemPrompt },
                     { role: "user", content: input.userContent },
                 ],
                 format: formatSchema as any,
                 stream: false,
+                think: false,
                 options: { temperature: 0 },
             });
 
