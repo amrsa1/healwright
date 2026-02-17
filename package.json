@@ -7,8 +7,8 @@
     "test:headed": "SELF_HEAL=1 npx playwright test --headed"
   },
   "dependencies": {
-    "@playwright/test": "^1.52.0",
-    "dotenv": "^17.2.4",
-    "healwright": "latest"
+    "@playwright/test": "^1.58.2",
+    "dotenv": "^17.3.1",
+    "healwright": "*"
   }
 }

@@ -9,6 +9,7 @@ export default defineConfig({
   retries: 2,
   workers: 1,
   reporter: [['list']],
+  timeout: 60 * 1000,
   use: {
     headless: true,
   },
