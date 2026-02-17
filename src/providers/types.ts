@@ -1,11 +1,11 @@
 /**
  * AI Provider abstraction for healwright
- * Supports multiple AI backends: OpenAI, Anthropic, Google
+ * Supports multiple AI backends: OpenAI, Anthropic, Google, Local (Ollama)
  */
 
 import { HealPlanT } from "../types";
 
-export type ProviderName = "openai" | "gpt" | "anthropic" | "claude" | "google" | "gemini";
+export type ProviderName = "openai" | "gpt" | "anthropic" | "claude" | "google" | "gemini" | "local" | "ollama";
 
 export interface AIProviderConfig {
     apiKey: string;
@@ -108,4 +108,6 @@ export const DEFAULT_MODELS: Record<ProviderName, string> = {
     claude: "claude-sonnet-4-20250514",
     google: "gemini-2.5-flash",
     gemini: "gemini-2.5-flash",
+    local: "qwen3:4b",
+    ollama: "qwen3:4b",
 };

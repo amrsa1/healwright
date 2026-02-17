@@ -41,70 +41,75 @@ export const healLog = {
     console.log();
     console.log(`${c.bgPurple}${c.bold}${c.white}  ✦ healwright  ${c.reset}`);
   },
-  
+
   actionFailed: (action: string, contextName: string) => {
-    console.log(`${c.gray}  ┌${'─'.repeat(50)}${c.reset}`);
+    console.log(`${c.gray}  │${c.reset}`);
     console.log(`${c.gray}  ├─${c.reset} ${c.yellow}⚡${c.reset} ${c.dim}${action.toUpperCase()}${c.reset} ${c.white}${contextName}${c.reset}`);
   },
-  
+
   askingAI: (_contextName: string, candidateCount: number, totalCollected?: number) => {
     const filtered = totalCollected && totalCollected > candidateCount
       ? ` ${c.dim}(filtered from ${totalCollected})${c.reset}`
       : '';
     console.log(`${c.gray}  │  ${c.purple}⬡${c.reset} ${c.dim}analyzing ${candidateCount} elements...${c.reset}${filtered}`);
   },
-  
+
   aiResponse: (length: number) => {
     console.log(`${c.gray}  │  ${c.dim}↳ received ${length} chars${c.reset}`);
   },
-  
+
   candidateRejected: (type: string, reason: string) => {
     console.log(`${c.gray}  │  ${c.dim}↳ [${type}] skipped: ${reason}${c.reset}`);
   },
-  
+
   candidateError: (type: string, error: string) => {
     console.log(`${c.gray}  │  ${c.red}↳ [${type}] error: ${error}${c.reset}`);
   },
-  
+
   healed: (contextName: string, strategy: StrategyT) => {
     const strategyStr = formatStrategy(strategy);
     console.log(`${c.gray}  │${c.reset}`);
-    console.log(`${c.gray}  └─${c.reset} ${c.green}✓${c.reset} ${c.bold}${c.white}${contextName}${c.reset}`);
-    console.log(`${c.gray}     ${c.dim}→ ${strategyStr}${c.reset}`);
+    console.log(`${c.gray}  ├─${c.reset} ${c.green}✓${c.reset} ${c.bold}${c.white}${contextName}${c.reset}`);
+    console.log(`${c.gray}  │  ${c.dim}→ ${strategyStr}${c.reset}`);
   },
 
   tokenUsage: (input: number, output: number, total: number) => {
-    console.log(`${c.gray}     ${c.dim}↑ ${c.cyan}${input}${c.dim} input · ${c.cyan}${output}${c.dim} output · ${c.bold}${c.cyan}${total}${c.dim} total tokens${c.reset}`);
+    console.log(`${c.gray}  │  ${c.dim}↑ ${c.cyan}${input}${c.dim} input · ${c.cyan}${output}${c.dim} output · ${c.bold}${c.cyan}${total}${c.dim} total tokens${c.reset}`);
+    console.log(`${c.gray}  └${'─'.repeat(49)}${c.reset}`);
     console.log();
   },
-  
+
   usedCache: (contextName: string) => {
     console.log(`${c.gray}  │  ${c.cyan}◆${c.reset} ${c.dim}cached: ${contextName}${c.reset}`);
+    console.log(`${c.gray}  └${'─'.repeat(49)}${c.reset}`);
+    console.log();
   },
-  
+
   cacheMiss: (contextName: string) => {
     console.log(`${c.gray}  │  ${c.yellow}○${c.reset} ${c.dim}cache stale for "${contextName}", re-healing...${c.reset}`);
   },
-  
+
   healFailed: (contextName: string, error: string) => {
     console.log(`${c.gray}  │${c.reset}`);
-    console.log(`${c.gray}  └─${c.reset} ${c.red}✕${c.reset} ${c.red}${contextName}${c.reset}`);
-    console.log(`${c.gray}     ${c.dim}${error}${c.reset}`);
+    console.log(`${c.gray}  ├─${c.reset} ${c.red}✕${c.reset} ${c.red}${contextName}${c.reset}`);
+    console.log(`${c.gray}  │  ${c.dim}${error}${c.reset}`);
+    console.log(`${c.gray}  └${'─'.repeat(49)}${c.reset}`);
     console.log();
   },
-  
+
   aiDetectMode: (_action: string, contextName: string) => {
-    console.log(`${c.gray}  ┌${'─'.repeat(50)}${c.reset}`);
+    console.log(`${c.gray}  │${c.reset}`);
     console.log(`${c.gray}  ├─${c.reset} ${c.purple}◈${c.reset} ${c.dim}AI DETECT${c.reset} ${c.white}${contextName}${c.reset}`);
   },
-  
+
   noValidCandidate: (contextName: string) => {
     console.log(`${c.gray}  │  ${c.red}↳ no valid candidate found for "${contextName}"${c.reset}`);
   },
 
   warn: (message: string) => {
     console.log(`${c.gray}  │${c.reset}`);
-    console.log(`${c.gray}  └─${c.reset} ${c.yellow}⚠${c.reset} ${c.yellow}${message}${c.reset}`);
+    console.log(`${c.gray}  ├─${c.reset} ${c.yellow}⚠${c.reset} ${c.yellow}${message}${c.reset}`);
+    console.log(`${c.gray}  └${'─'.repeat(49)}${c.reset}`);
   },
 
   aiDisabled: () => {

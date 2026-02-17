@@ -56,7 +56,8 @@
                     <!-- Step 2: Configuration -->
                     <div class="step-block" style="--s:1">
                         <h4><span class="step-num step-num--purple">02</span> Configuration</h4>
-                        <p>Set your API key and choose your provider — OpenAI, Anthropic, or Google.</p>
+                        <p>Set your API key and choose your provider — OpenAI, Anthropic, Google, or use a local LLM via
+                            Ollama.</p>
                         <div class="code-block-wrap">
                             <div class="code-block-header">
                                 <span class="dot red"></span>
@@ -64,7 +65,8 @@
                                 <span class="dot green"></span>
                                 <span class="file-label">.env</span>
                             </div>
-                            <button class="code-copy-btn" onclick="copyBlock(this)"><i data-lucide="clipboard"></i> Copy</button>
+                            <button class="code-copy-btn" onclick="copyBlock(this)"><i data-lucide="clipboard"></i>
+                                Copy</button>
                             <div class="code-preview">
                                 <pre><code class="language-bash"><span class="comment"># OpenAI (default, or AI_PROVIDER="gpt")</span>
 export AI_API_KEY="your-openai-key"
@@ -78,7 +80,15 @@ export SELF_HEAL=1
 <span class="comment"># Google (AI_PROVIDER="google" or "gemini")</span>
 export AI_PROVIDER="google"
 export AI_API_KEY="your-google-key"
-export SELF_HEAL=1</code></pre>
+export SELF_HEAL=1
+
+<span class="comment"># Local LLM via Ollama (AI_PROVIDER="local" or "ollama") — no API key needed!</span>
+export AI_PROVIDER="local"
+export SELF_HEAL=1
+<span class="comment"># Default model: qwen3:4b (2.5 GB) — or pick another:</span>
+<span class="comment"># export AI_MODEL="qwen3:8b"      # stronger reasoning</span>
+<span class="comment"># export AI_MODEL="mistral"       # fast and reliable</span>
+<span class="comment"># export AI_MODEL="deepseek-r1:8b" # strong JSON output</span></code></pre>
                             </div>
                         </div>
                     </div>
@@ -94,7 +104,8 @@ export SELF_HEAL=1</code></pre>
                                 <span class="dot green"></span>
                                 <span class="file-label">fixtures.ts</span>
                             </div>
-                            <button class="code-copy-btn" onclick="copyBlock(this)"><i data-lucide="clipboard"></i> Copy</button>
+                            <button class="code-copy-btn" onclick="copyBlock(this)"><i data-lucide="clipboard"></i>
+                                Copy</button>
                             <div class="code-preview">
                                 <pre><code class="language-typescript"><span class="keyword">import</span> { test as base } from <span class="string">'@playwright/test'</span>;
 <span class="keyword">import</span> { createHealingFixture, HealPage } from <span class="string">'healwright'</span>;
@@ -116,7 +127,8 @@ export SELF_HEAL=1</code></pre>
                                 <span class="dot green"></span>
                                 <span class="file-label">login.spec.ts</span>
                             </div>
-                            <button class="code-copy-btn" onclick="copyBlock(this)"><i data-lucide="clipboard"></i> Copy</button>
+                            <button class="code-copy-btn" onclick="copyBlock(this)"><i data-lucide="clipboard"></i>
+                                Copy</button>
                             <div class="code-preview">
                                 <pre><code class="language-typescript"><span class="keyword">import</span> { test, expect } from <span class="string">'./fixtures'</span>;
 
@@ -193,7 +205,8 @@ export SELF_HEAL=1</code></pre>
                     <!-- Step 6: AI-Only Mode -->
                     <div class="step-block" style="--s:5">
                         <h4><span class="step-num step-num--purple">06</span> AI-Only Mode</h4>
-                        <p>Pass an empty string as the locator and let AI find the element from your description alone.</p>
+                        <p>Pass an empty string as the locator and let AI find the element from your description alone.
+                        </p>
                         <div class="code-block-wrap">
                             <div class="code-block-header">
                                 <span class="dot red"></span>
@@ -201,7 +214,8 @@ export SELF_HEAL=1</code></pre>
                                 <span class="dot green"></span>
                                 <span class="file-label">example.spec.ts</span>
                             </div>
-                            <button class="code-copy-btn" onclick="copyBlock(this)"><i data-lucide="clipboard"></i> Copy</button>
+                            <button class="code-copy-btn" onclick="copyBlock(this)"><i data-lucide="clipboard"></i>
+                                Copy</button>
                             <div class="code-preview">
                                 <pre><code class="language-typescript"><span class="keyword">await</span> page.heal.<span class="function">click</span>(<span class="string">''</span>, <span class="string">'Login button'</span>);
 <span class="keyword">await</span> page.heal.<span class="function">fill</span>(<span class="string">''</span>, <span class="string">'Search input'</span>, <span class="string">'my query'</span>);</code></pre>
@@ -212,7 +226,9 @@ export SELF_HEAL=1</code></pre>
                     <!-- Step 7: Cache -->
                     <div class="step-block" style="--s:6">
                         <h4><span class="step-num step-num--green">07</span> Cache Configuration</h4>
-                        <p>Healed selectors are cached in <code>.self-heal/</code>. Add it to your <code>.gitignore</code>:</p>
+                        <p>Healed selectors are cached in <code>.self-heal/</code>. Add it to your
+                            <code>.gitignore</code>:
+                        </p>
                         <div class="code-block-wrap">
                             <div class="code-block-header">
                                 <span class="dot red"></span>

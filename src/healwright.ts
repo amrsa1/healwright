@@ -62,11 +62,16 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
   const apiKey = opts?.apiKey ?? process.env.AI_API_KEY;
   const providerName = (opts?.provider ?? process.env.AI_PROVIDER?.toLowerCase() ?? "openai") as ProviderName;
   const model = opts?.model ?? process.env.AI_MODEL;
+  const isLocalProvider = providerName === "local" || providerName === "ollama";
 
   // Create AI provider if enabled
+  // Local providers (Ollama) don't require an API key — they connect to a local instance
   let aiProvider: AIProvider | null = null;
-  if (enabled && apiKey) {
-    aiProvider = createAIProvider(providerName, { apiKey, model });
+  if (enabled && (apiKey || isLocalProvider)) {
+    aiProvider = createAIProvider(providerName, {
+      apiKey: apiKey ?? (isLocalProvider ? (process.env.OLLAMA_HOST ?? "") : ""),
+      model,
+    });
   }
 
   const cacheFile = opts?.cacheFile ?? path.join(process.cwd(), ".self-heal", "healed_locators.json");
@@ -254,7 +259,7 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
         const cachedLoc = buildLocator(page, cached);
         await waitForReady(cachedLoc, action, timeout);
         await performAction(cachedLoc);
-      if (action === "click" || action === "dblclick" || action === "selectOption") await waitForStable(page);
+        if (action === "click" || action === "dblclick" || action === "selectOption") await waitForStable(page);
         await log({ ts, url: page.url(), key, action, contextName, used: "cache", success: true, strategy: cached });
         healLog.usedCache(contextName);
         return;
