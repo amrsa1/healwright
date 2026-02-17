@@ -69,7 +69,7 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
   let aiProvider: AIProvider | null = null;
   if (enabled && (apiKey || isLocalProvider)) {
     aiProvider = createAIProvider(providerName, {
-      apiKey: apiKey ?? (isLocalProvider ? (process.env.OLLAMA_HOST ?? "") : ""),
+      apiKey: isLocalProvider ? (process.env.OLLAMA_HOST ?? "") : (apiKey ?? ""),
       model,
     });
   }

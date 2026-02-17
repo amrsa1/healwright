@@ -70,25 +70,28 @@
                             <div class="code-preview">
                                 <pre><code class="language-bash"><span class="comment"># OpenAI (default, or AI_PROVIDER="gpt")</span>
 export AI_API_KEY="your-openai-key"
+export AI_MODEL="gpt-5-nano"
 export SELF_HEAL=1
 
 <span class="comment"># Anthropic (AI_PROVIDER="anthropic" or "claude")</span>
 export AI_PROVIDER="anthropic"
 export AI_API_KEY="your-anthropic-key"
+export AI_MODEL="claude-sonnet-4-20250514"
 export SELF_HEAL=1
 
 <span class="comment"># Google (AI_PROVIDER="google" or "gemini")</span>
 export AI_PROVIDER="google"
 export AI_API_KEY="your-google-key"
+export AI_MODEL="gemini-2.5-flash"
 export SELF_HEAL=1
 
 <span class="comment"># Local LLM via Ollama (AI_PROVIDER="local" or "ollama") — no API key needed!</span>
 export AI_PROVIDER="local"
+export AI_MODEL="gemma3:4b"
 export SELF_HEAL=1
-<span class="comment"># Default model: qwen3:4b (2.5 GB) — or pick another:</span>
-<span class="comment"># export AI_MODEL="qwen3:8b"      # stronger reasoning</span>
+<span class="comment"># Recommended: gemma3:4b or mistral (best accuracy for local models)</span>
 <span class="comment"># export AI_MODEL="mistral"       # fast and reliable</span>
-<span class="comment"># export AI_MODEL="deepseek-r1:8b" # strong JSON output</span></code></pre>
+<span class="comment"># export AI_MODEL="llama3.2:1b"   # ultra-light for CI</span></code></pre>
                             </div>
                         </div>
                     </div>
