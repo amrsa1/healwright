@@ -5,11 +5,24 @@
 
 import { HealPlanT } from "../types";
 
+export { strictJsonSchema } from "../jsonSchema";
+export type { JsonSchemaObject } from "../jsonSchema";
+
 export type ProviderName = "openai" | "gpt" | "anthropic" | "claude" | "google" | "gemini" | "local" | "ollama";
 
 export interface AIProviderConfig {
     apiKey: string;
     model?: string;
+    /** Override the provider's API endpoint (Azure, OpenRouter, vLLM, a gateway…). */
+    baseURL?: string;
+}
+
+/**
+ * OpenAI's `reasoning` parameter is only valid for reasoning models. Sending it
+ * to a chat model (a perfectly legal `AI_MODEL` override) is a request error.
+ */
+export function isReasoningModel(model: string): boolean {
+    return /^(gpt-5|o[1-9])/i.test(model.trim());
 }
 
 export interface GenerateHealPlanInput {
@@ -65,7 +78,7 @@ export function cleanJson(raw: string): string {
     }
 
     // Extract the first complete JSON object/array from the string
-    const jsonStart = s.search(/[{\[]/);
+    const jsonStart = s.search(/[{[]/);
     if (jsonStart >= 0) {
         s = s.slice(jsonStart);
         // Find the matching closing bracket

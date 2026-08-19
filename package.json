@@ -14,19 +14,22 @@
   },
   "files": [
     "dist",
-    "README.md",
-    "LICENSE"
+    "readme.md",
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
-    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "build": "tsup src/index.ts --format cjs,esm --clean && npm run build:types",
+    "dev": "tsup src/index.ts --format cjs,esm --watch",
     "test": "SELF_HEAL=1 npx playwright test",
     "test:headed": "SELF_HEAL=1 npx playwright test --headed",
     "test:unit": "vitest run",
     "test:heal": "SELF_HEAL=1 npx playwright test examples/element-zoo-healing.test.ts",
-    "test:ci": "npm run test:unit && npm run test:heal",
-    "lint": "eslint src/",
-    "prepublishOnly": "npm run build"
+    "test:ci": "npm run typecheck && npm run lint && npm run test:unit && npm run test:heal",
+    "lint": "oxlint src tests",
+    "prepublishOnly": "npm run build",
+    "typecheck": "tsc --noEmit",
+    "build:types": "tsc --emitDeclarationOnly"
   },
   "keywords": [
     "playwright",
@@ -59,25 +62,33 @@
   },
   "homepage": "https://github.com/amrsa1/healwright#readme",
   "peerDependencies": {
-    "@playwright/test": ">=1.60.0"
+    "@playwright/test": ">=1.62.1",
+    "playwright-core": ">=1.60.0"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.96.0",
-    "@google/genai": "^2.2.0",
+    "@anthropic-ai/sdk": "^0.118.0",
+    "@google/genai": "^2.17.1",
     "ollama": "^0.6.3",
-    "openai": "^6.37.0",
-    "playwright-core": ">=1.60.0",
+    "openai": "^7.5.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@playwright/test": "^1.60.0",
-    "@types/node": "^25.7.0",
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^26.2.0",
     "dotenv": "^17.4.2",
+    "oxlint": "^1.79.0",
+    "playwright-core": ">=1.60.0",
     "tsup": "^8.5.1",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.6"
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
   },
   "engines": {
     "node": ">=18.0.0"
-  }
+  },
+  "peerDependenciesMeta": {
+    "playwright-core": {
+      "optional": true
+    }
+  },
+  "sideEffects": false
 }

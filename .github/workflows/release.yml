@@ -49,7 +49,10 @@ jobs:
         run: npm ci
 
       - name: Compile TypeScript
-        run: npx tsc --noEmit
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
 
       - name: Build package
         run: npm run build
@@ -119,42 +122,51 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Generate release notes
+      - name: Create GitHub Release
         if: ${{ inputs.dry-run == false }}
-        id: notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION=${{ steps.version.outputs.version }}
-          # Get the previous tag
-          PREV_TAG=$(git tag --sort=-v:refname | grep -v "$VERSION" | head -1)
+          VERSION="${{ steps.version.outputs.version }}"
+          NUMBER="${VERSION#v}"
+
+          # Prefer the hand-written CHANGELOG section for this version; fall
+          # back to commit subjects if there isn't one.
+          awk -v ver="$NUMBER" '
+            $0 ~ "^## \\[" ver "\\]" { found = 1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > /tmp/notes.md
+
+          if [ ! -s /tmp/notes.md ]; then
+            echo "No CHANGELOG entry for $NUMBER — falling back to commit log."
+            PREV_TAG=$(git tag --sort=-v:refname | grep -v "$VERSION" | head -1)
+            {
+              echo "## What's Changed"
+              echo ""
+              if [ -n "$PREV_TAG" ]; then
+                git log "${PREV_TAG}..HEAD" --pretty=format:"- %s (%h)" --no-merges | head -50
+              else
+                git log --pretty=format:"- %s (%h)" --no-merges -20
+              fi
+              echo ""
+            } > /tmp/notes.md
+          fi
 
           {
-            echo "notes<<RELEASE_EOF"
-            echo "## What's Changed"
-            echo ""
-            if [ -n "$PREV_TAG" ]; then
-              git log "${PREV_TAG}..HEAD" --pretty=format:"- %s (%h)" --no-merges | head -50
-            else
-              git log --pretty=format:"- %s (%h)" --no-merges -20
-            fi
-            echo ""
             echo ""
             echo "---"
             echo ""
-            echo "**Install:** \`npm install healwright@${VERSION#v}\`"
-            echo "RELEASE_EOF"
-          } >> "$GITHUB_OUTPUT"
+            echo "**Install:** \`npm install healwright@${NUMBER}\`"
+          } >> /tmp/notes.md
 
-      - name: Create GitHub Release
-        if: ${{ inputs.dry-run == false }}
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.version.outputs.version }}
-          release_name: ${{ steps.version.outputs.version }}
-          body: ${{ steps.notes.outputs.notes }}
-          draft: false
-          prerelease: false
+          gh release create "$VERSION" \
+            --title "$VERSION" \
+            --notes-file /tmp/notes.md \
+            --verify-tag
+
+          echo "### 🚀 Released $VERSION" >> "$GITHUB_STEP_SUMMARY"
+          gh release view "$VERSION" --json url --jq .url >> "$GITHUB_STEP_SUMMARY"
 
       - name: Dry-run summary
         if: ${{ inputs.dry-run == true }}

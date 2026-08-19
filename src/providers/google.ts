@@ -8,28 +8,39 @@ import { AIProvider, AIProviderConfig, GenerateHealPlanInput, HealPlanResult, DE
 import { HealPlan } from "../types";
 import { healLog } from "../logger";
 
+/**
+ * Build the request. The schema goes through `responseJsonSchema` rather than
+ * being serialised into the prompt — same enforcement, far fewer input tokens.
+ */
+export function buildGoogleRequest(input: GenerateHealPlanInput, model: string): Record<string, unknown> {
+    return {
+        model,
+        contents: `${input.systemPrompt}\n\n---\n\n${input.userContent}`,
+        config: {
+            responseMimeType: "application/json",
+            responseJsonSchema: input.jsonSchema,
+        },
+    };
+}
+
 export class GoogleProvider implements AIProvider {
     readonly name = "google" as const;
     private ai: GoogleGenAI;
     private model: string;
 
     constructor(config: AIProviderConfig) {
-        this.ai = new GoogleGenAI({ apiKey: config.apiKey });
+        this.ai = new GoogleGenAI({
+            apiKey: config.apiKey,
+            ...(config.baseURL ? { httpOptions: { baseUrl: config.baseURL } } : {}),
+        });
         this.model = config.model ?? DEFAULT_MODELS.google;
     }
 
     async generateHealPlan(input: GenerateHealPlanInput): Promise<HealPlanResult> {
         try {
-            // Combined prompt for Gemini (system + user)
-            const combinedPrompt = `${input.systemPrompt}\n\n---\n\n${input.userContent}\n\nRespond with valid JSON matching this schema:\n${JSON.stringify(input.jsonSchema, null, 2)}`;
-
-            const response = await this.ai.models.generateContent({
-                model: this.model,
-                contents: combinedPrompt,
-                config: {
-                    responseMimeType: "application/json",
-                },
-            });
+            const response = await this.ai.models.generateContent(
+                buildGoogleRequest(input, this.model) as any,
+            );
 
             const content = response.text;
             healLog.aiResponse(content?.length ?? 0);

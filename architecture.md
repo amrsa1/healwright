@@ -239,13 +239,13 @@ When `force: true` is passed:
 
 | Optimization | Impact |
 |--------------|--------|
-| Quick timeout (1s) for initial attempts | Fail fast when locator is broken |
+| Quick timeout (1s, `quickTimeout`) for initial attempts | Fail fast when locator is broken |
 | Lazy-loaded disk cache | Read once, not on every action |
 | In-memory cache (Map) | O(1) lookups during test run |
-| Cache staleness detection | Re-heal only when DOM changes |
-| Structured output (JSON schema) | More reliable AI responses |
+| Cached locator is retried first | A stale entry costs one failed lookup, then re-heals |
+| Structured output (JSON schema) | Same schema to every provider, generated from Zod |
 | `dispatchEvent` for force click | Works on `display: none` elements |
-| `rankCandidates()` pre-filtering | ~20-30% fewer tokens sent to AI |
+| Rank first, then truncate to `maxCandidates` | The right element cannot be cut by DOM order |
 | Token usage tracking | Per-heal visibility in console & JSONL log |
 
 ## Best Practices
@@ -280,10 +280,13 @@ When `force: true` is passed:
 
 - Cloud providers require AI API key and internet connection (local provider needs neither)
 - AI responses add latency (~1-2s per heal with cloud, varies with local hardware)
-- Candidates are collected then pre-filtered to top 40 by relevance score (configurable via `maxCandidates`)
-- Cannot heal across iframes (yet)
+- Candidates are collected (up to 1000), ranked, then truncated to `maxCandidates` (default 40)
+- Cannot heal across iframes (yet) — only the main frame is searched
 - Force click only works with `dispatchEvent` (no pointer coordinates)
 - Local models may produce less accurate results than cloud providers depending on model size
+- The cache is shared across parallel workers via a lock file; it is best-effort, not a database
+- A heal that resolves to the *wrong* element still passes. Use `minConfidence`, `mode: 'warn'`,
+  and `getHealSummary()` to keep that visible
 
 ## Error Handling
 
@@ -303,7 +306,7 @@ HealError:
      • Page URL: https://todomvc.com/examples/react/dist/
      • Candidates analyzed: 16
 
-  ⚠️  Strategies tried:
+  🔬 Strategies tried:
      • [testid] skipped: not visible
      • [css] rejected: count=0
 

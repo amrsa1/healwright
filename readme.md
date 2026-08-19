@@ -125,6 +125,7 @@ All methods take a locator (or empty string for AI-only) and a description:
 | `heal.hover(locator, desc)` | Hover over element |
 | `heal.focus(locator, desc)` | Focus element |
 | `heal.locator(selector, desc)` | Create self-healing locator for chaining |
+| `heal.getLocator(selector, desc)` | Resolve to a real Playwright `Locator` (works with `expect`) |
 
 ### Self-Healing Locator
 
@@ -160,6 +161,100 @@ await page.heal.hover('', 'Todo item in the list');
 await page.heal.click('', 'Delete button', { force: true });
 ```
 
+### Assertions — `heal.getLocator()`
+
+`heal.locator()` wraps a fixed set of actions. When you need the element itself — for an assertion,
+for `.nth()`, for `press()`, for anything Playwright offers — use `getLocator()`. It returns a real
+`Locator`, healed if the selector no longer matches:
+
+```typescript
+const badge = await page.heal.getLocator('.cart-count', 'Cart item count badge');
+await expect(badge).toHaveText('1');
+
+// Everything on Locator is available, because it *is* a Locator
+const rows = await page.heal.getLocator('.order-row', 'Order history rows');
+await expect(rows).toHaveCount(3);
+await rows.nth(0).click();
+```
+
+This is usually the method you want. `heal.click(...)` and friends remain useful when you want the
+action and the healing in one call.
+
+### Trusting the Heal — confidence, modes, and the run summary
+
+Self-healing has a failure mode that a crash does not: it can turn a real regression into a passing
+test. If someone deletes the checkout button and the AI confidently clicks a different one, your
+suite goes green and nobody finds out. Three controls exist so you decide when that is acceptable.
+
+**`minConfidence`** rejects weak matches outright:
+
+```typescript
+createHealingFixture({ minConfidence: 0.75 })  // or HEALWRIGHT_MIN_CONFIDENCE=0.75
+```
+
+The model reports how sure it is about each strategy. Below the threshold, healwright fails the
+action instead of guessing — the test breaks, which is the honest answer.
+
+**`mode: 'warn'`** audits without changing behaviour. Healing runs, reports what it *would* have
+done, then lets the original failure stand:
+
+```bash
+HEALWRIGHT_MODE=warn npx playwright test
+```
+
+Use it in CI to see how far your locators have drifted without letting healing paper over it.
+
+**`getHealSummary()`** gives you the tally, so a build can fail on drift:
+
+```typescript
+// global-teardown.ts
+import { getHealSummary } from 'healwright';
+
+export default function () {
+  const { healed, fromCache, entries } = getHealSummary();
+  if (healed > 0) {
+    console.error(`${healed} locator(s) needed healing — update the source selectors:`);
+    for (const e of entries.filter(e => e.outcome === 'healed')) {
+      console.error(`  ${e.action} "${e.contextName}" → ${JSON.stringify(e.strategy)}`);
+    }
+    process.exitCode = 1;
+  }
+}
+```
+
+Point `globalTeardown` at that file in `playwright.config.ts` and healing becomes a signal you act
+on rather than one that hides.
+
+### Custom Endpoints and Providers
+
+Any OpenAI-compatible gateway works through `baseURL`:
+
+```bash
+export AI_PROVIDER=openai
+export AI_BASE_URL="https://openrouter.ai/api/v1"
+export AI_API_KEY="your-key"
+export AI_MODEL="anthropic/claude-sonnet-4"
+```
+
+For anything else, implement `AIProvider` and pass it in — healwright never constructs a client of
+its own when you do:
+
+```typescript
+import { createHealingFixture, type AIProvider } from 'healwright';
+
+const myProvider: AIProvider = {
+  name: 'openai',
+  async generateHealPlan({ systemPrompt, userContent, jsonSchema }) {
+    const plan = await callYourModel(systemPrompt, userContent, jsonSchema);
+    return { plan, tokenUsage: null };
+  },
+};
+
+export const test = base.extend<{ page: HealPage }>(
+  createHealingFixture({ aiProvider: myProvider })
+);
+```
+
 ### Mixing Healing with Regular Playwright
 
 Just because you've added healwright doesn't mean you have to use `page.heal.*` for everything. The wrapped page still works exactly like a normal Playwright page, so you can mix and match as needed:
@@ -185,12 +280,16 @@ Pick the approach that makes sense for each action. Maybe you use healing for th
 | `AI_API_KEY` | Your AI provider API key |
 | `AI_PROVIDER` | `openai`/`gpt`, `anthropic`/`claude`, `google`/`gemini`, or `local`/`ollama` |
 | `AI_MODEL` | Override the default model (optional) |
+| `AI_BASE_URL` | Point a provider at a different endpoint — Azure, OpenRouter, vLLM, a gateway |
+| `HEALWRIGHT_MODE` | `heal` (default), `warn` (report only), or `off` |
+| `HEALWRIGHT_MIN_CONFIDENCE` | Reject heals scoring below this (0-1, default `0`) |
+| `HEALWRIGHT_LOG` | `info` (default), `error`, or `silent` |
 | `OLLAMA_HOST` | Ollama server URL (default: `http://127.0.0.1:11434`) |
 
 **Default models by provider:**
-- **OpenAI:** `gpt-5.2`
-- **Anthropic:** `claude-sonnet-4-5`
-- **Google:** `gemini-3-flash`
+- **OpenAI:** `gpt-5-nano`
+- **Anthropic:** `claude-sonnet-4-20250514`
+- **Google:** `gemini-2.5-flash`
 - **Local (Ollama):** `gemma3:4b`
 
 ### Fixture Options
@@ -199,32 +298,41 @@ You can pass options when creating the healing fixture:
 
 ```typescript
 const test = base.extend<{ page: HealPage }>(createHealingFixture({
-  maxCandidates: 30,  // Max DOM elements sent to AI (default: 30)
-  maxAiTries: 4,      // Max AI strategies to validate (default: 4)
-  timeout: 5000,      // Locator timeout in ms (default: 5000)
-  provider: 'openai', // AI provider (default: 'openai')
-  model: 'gpt-5.2',   // Override default model
+  maxCandidates: 40,     // Ranked elements sent to the AI (default: 40)
+  maxAiTries: 4,         // Max AI strategies to validate (default: 4)
+  timeout: 5000,         // Healed-locator and action timeout in ms (default: 5000)
+  quickTimeout: 1000,    // How long the original locator gets first (default: 1000 when healing)
+  minConfidence: 0,      // Reject heals below this confidence, 0-1 (default: 0 = accept any)
+  mode: 'heal',          // 'heal' | 'warn' (report only) | 'off'
+  provider: 'openai',    // AI provider (default: 'openai')
+  model: 'gpt-5-nano',   // Override default model
+  baseURL: undefined,    // Custom API endpoint (Azure, OpenRouter, vLLM, gateway)
+  logLevel: 'info',      // 'info' | 'error' | 'silent'
 }));
 ```
+
+> **A note on `quickTimeout`.** When healing is on, the original locator only gets 1 second before
+> the AI takes over — a broken selector should fail fast. If your app legitimately renders slowly,
+> raise this. Leaving it too low turns "slow" into "broken" and spends an AI call on it.
 
 ### Token Optimization
 
 Healwright is designed to minimize AI token consumption and keep costs low:
 
 - **Compact candidates** — Only non-null attributes are sent. Null/empty fields are stripped, and short keys are used (`tid` instead of `data-testid`, `txt` instead of `text`, etc.)
-- **Invisible elements filtered** — Hidden elements (`display: none`, `visibility: hidden`, zero-size) are excluded before sending to the AI
-- **Smart pre-filtering** — Before sending candidates to the AI, `rankCandidates()` scores each element by keyword match, tag-type inference, ARIA role relevance, and test-ID presence. Only the top-ranked candidates are sent, typically reducing the set by 20–30% while preserving accuracy
+- **Hidden elements are marked, not dropped** — Elements that are `display: none`, `visibility: hidden` or zero-size are still sent, flagged with `hid: true`. Real apps hide the element you actually want (styled checkboxes, hover-revealed buttons), so excluding them would break more heals than it saves tokens on
+- **Rank, then truncate** — Everything matching is collected first, then `rankCandidates()` scores each element by keyword match, tag-type inference, ARIA role relevance and test-ID presence. Only the top `maxCandidates` are sent. Ranking before truncation matters: cutting the list in DOM order first would hide the target on a long page
 - **Capped output** — The AI is asked to return a maximum of 3 strategies per request
-- **Configurable limit** — Control how many DOM elements are collected with `maxCandidates`
+- **Configurable limit** — `maxCandidates` controls how many ranked elements reach the model
 
-Lower `maxCandidates` = fewer tokens = lower cost and faster responses. The default of 30 works well for most pages. For complex pages with many interactive elements, you can increase it:
+Lower `maxCandidates` = fewer tokens = lower cost and faster responses. The default of 40 works well for most pages:
 
 ```typescript
 // Simple pages — fewer candidates, faster & cheaper
 createHealingFixture({ maxCandidates: 15 })
 
 // Complex pages — more candidates, better accuracy
-createHealingFixture({ maxCandidates: 50 })
+createHealingFixture({ maxCandidates: 80 })
 ```
 
 ### Token Usage Visibility
@@ -312,9 +420,13 @@ It includes two smoke tests:
 
 When healing is triggered, healwright sends a **DOM snapshot** of candidate elements (tag names, roles, aria labels, text content, test IDs, etc.) to the configured AI provider's API. **No screenshots or full page HTML are sent** — only a structured list of relevant elements.
 
-Keep this in mind if your application contains sensitive data in the DOM (e.g., PII, financial data, internal URLs). You can:
+Keep this in mind if your application contains sensitive data in the DOM (e.g., PII, financial data, internal URLs). Note that hidden elements are included in that snapshot (flagged `hid: true`), because the element
+you want is often deliberately hidden. The page URL is also sent.
+
+You can:
 - **Use a local LLM** with `AI_PROVIDER=local` — data never leaves your machine
-- Use a self-hosted or on-premise LLM by configuring a custom `AI_MODEL` and API endpoint
+- **Point at a self-hosted or on-premise endpoint** with `AI_BASE_URL` (or the `baseURL` option) — works with Azure OpenAI, OpenRouter, vLLM, LiteLLM, or any OpenAI-compatible gateway
+- **Bring your own provider** with the `aiProvider` option, for full control over what is sent
 - Limit healing to non-production environments
 - Review the candidate data sent via the `.self-heal/heal_events.jsonl` log
 

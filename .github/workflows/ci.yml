@@ -32,7 +32,10 @@ jobs:
         run: npm ci
 
       - name: Compile TypeScript
-        run: npx tsc --noEmit
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
 
       - name: Build package
         run: npm run build

@@ -6,6 +6,9 @@ dotenv.config({ quiet: true });
 export default defineConfig({
   testDir: './examples',
   fullyParallel: true,
+  // A stray `test.only` silently shrinks the suite to a handful of tests —
+  // fail the run instead of reporting green on 5 of 76.
+  forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: 1,
   reporter: [

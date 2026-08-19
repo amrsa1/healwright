@@ -4,8 +4,20 @@
 
 import { z } from "zod";
 import type { Page, Locator } from "playwright-core";
+import { strictJsonSchema, type JsonSchemaObject } from "./jsonSchema";
+import type { AIProvider } from "./providers/types";
 
-export type Action = "click" | "fill" | "dblclick" | "check" | "uncheck" | "hover" | "focus" | "selectOption";
+export type Action =
+  | "click"
+  | "fill"
+  | "dblclick"
+  | "check"
+  | "uncheck"
+  | "hover"
+  | "focus"
+  | "selectOption"
+  /** Resolve an element without acting on it (used by `heal.getLocator`). */
+  | "locate";
 
 export type LocatorOrEmpty = Locator | string;
 
@@ -63,7 +75,7 @@ export class HealError extends Error {
   static formatMessage(message: string, ctx: HealErrorContext): string {
     const lines = [
       `\n╭───────────────────────────────────────────────────────────╮`,
-      `│  🔍 HEALWRIGHT: Element Not Found                       │`,
+      `│  🔍 HEALWRIGHT: Element Not Found                          │`,
       `╰───────────────────────────────────────────────────────────╯`,
       ``,
       `  ❌ ${message}`,
@@ -130,6 +142,21 @@ export interface HealingLocator {
   selectOption(value: string): Promise<void>;
 }
 
+/**
+ * How healing behaves when a locator fails.
+ * - `heal`  — find the element and continue (default)
+ * - `warn`  — find the element, report it, but let the original failure stand
+ * - `off`   — no healing at all
+ */
+export type HealMode = "heal" | "warn" | "off";
+
+export type HealLogLevel = "silent" | "error" | "info";
+
+export interface GetLocatorOptions {
+  /** Which candidate set to search. Defaults to `locate` (everything). */
+  as?: Action;
+}
+
 export interface HealMethods {
   click(target: LocatorOrEmpty, contextName: string, options?: ClickOptions): Promise<void>;
   fill(target: LocatorOrEmpty, contextName: string, value: string): Promise<void>;
@@ -149,6 +176,20 @@ export interface HealMethods {
    * await page.heal.locator('.new-todo', 'Input field for new todos').fill('Buy milk');
    */
   locator(selector: string, contextName: string): HealingLocator;
+  /**
+   * Resolve a description to a real Playwright `Locator`.
+   *
+   * The returned value is an ordinary Locator, so it works with everything
+   * Playwright offers — assertions included — rather than the fixed method set
+   * `heal.locator()` wraps.
+   *
+   * @example
+   * ```typescript
+   * const badge = await page.heal.getLocator('.cart-count', 'Cart item count badge');
+   * await expect(badge).toHaveText('1');
+   * ```
+   */
+  getLocator(selector: string, contextName: string, options?: GetLocatorOptions): Promise<Locator>;
 }
 
 export interface HealPage extends Page {
@@ -156,50 +197,51 @@ export interface HealPage extends Page {
 }
 
 export interface HealOptions {
+  /** Master switch. Defaults to `SELF_HEAL=1` / `AI_SELF_HEAL=true`. */
   enabled?: boolean;
+  /** `heal` (default), `warn` (report only), or `off`. Env: `HEALWRIGHT_MODE`. */
+  mode?: HealMode;
   provider?: "openai" | "gpt" | "anthropic" | "claude" | "google" | "gemini" | "local" | "ollama";
+  /**
+   * Use your own provider implementation instead of the built-in clients —
+   * any model reachable from Node, including ones healwright has no client for.
+   */
+  aiProvider?: AIProvider;
   model?: string;
+  /** Override the provider API endpoint (Azure, OpenRouter, vLLM, a gateway…). Env: `AI_BASE_URL`. */
+  baseURL?: string;
+  apiKey?: string;
   cacheFile?: string;
   reportFile?: string;
+  /** How many AI-suggested strategies to validate before giving up. Default 4. */
   maxAiTries?: number;
+  /** How many ranked elements are sent to the model. Default 40. */
   maxCandidates?: number;
+  /** Timeout for the healed locator and the action itself. Default 5000ms. */
   timeout?: number;
+  /**
+   * Timeout for the *original* locator before healing takes over.
+   * Defaults to 1000ms when healing is enabled, so a broken selector fails fast.
+   * Raise it if legitimate elements in your app appear slowly — a too-short
+   * value turns "slow" into "broken" and spends an AI call on it.
+   */
+  quickTimeout?: number;
+  /**
+   * Reject heals whose reported confidence (0-1) falls below this.
+   * Default 0 (accept anything). Env: `HEALWRIGHT_MIN_CONFIDENCE`.
+   */
+  minConfidence?: number;
   testName?: string;
-  apiKey?: string;
+  /** Console verbosity. Default `info`. Env: `HEALWRIGHT_LOG`. */
+  logLevel?: HealLogLevel;
+  /** Force ANSI colour on or off. Defaults to TTY detection and `NO_COLOR`. */
+  color?: boolean;
 }
 
-// JSON schema for structured output — compact, only required fields per strategy type
-export const healPlanJsonSchema = {
-  type: "object",
-  properties: {
-    candidates: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          strategy: {
-            type: "object",
-            properties: {
-              type: { type: "string", enum: ["testid", "role", "label", "placeholder", "text", "altText", "title", "css"] },
-              value: { type: ["string", "null"] },
-              selector: { type: ["string", "null"] },
-              role: { type: ["string", "null"] },
-              name: { type: ["string", "null"] },
-              text: { type: ["string", "null"] },
-              exact: { type: ["boolean", "null"] },
-            },
-            required: ["type", "value", "selector", "role", "name", "text", "exact"],
-            additionalProperties: false,
-          },
-          confidence: { type: "number" },
-          why: { type: "string" },
-        },
-        required: ["strategy", "confidence", "why"],
-        additionalProperties: false,
-      },
-      maxItems: 3,
-    },
-  },
-  required: ["candidates"],
-  additionalProperties: false,
-} as const;
+/**
+ * JSON schema for structured output — generated from the Zod schema above so
+ * the two can never drift, then normalised for strict structured-output modes.
+ */
+export const healPlanJsonSchema: JsonSchemaObject = strictJsonSchema(
+  z.toJSONSchema(HealPlan, { io: "output" }) as JsonSchemaObject,
+);

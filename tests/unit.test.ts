@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
-  isValidLocator,
   validateStrategy,
   cacheKey,
   buildLocator,
@@ -9,23 +8,6 @@ import {
 } from '../src/utils';
 import { formatStrategy } from '../src/logger';
 import type { StrategyT } from '../src/types';
-
-// ---------- isValidLocator ----------
-
-describe('isValidLocator', () => {
-  it('returns false for empty string', () => {
-    expect(isValidLocator('')).toBe(false);
-  });
-
-  it('returns true for non-empty string', () => {
-    expect(isValidLocator('button')).toBe(true);
-  });
-
-  it('returns true for a Locator-like object', () => {
-    const fakeLoc = { click: vi.fn(), fill: vi.fn() };
-    expect(isValidLocator(fakeLoc as any)).toBe(true);
-  });
-});
 
 // ---------- validateStrategy ----------
 

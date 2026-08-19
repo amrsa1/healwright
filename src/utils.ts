@@ -8,10 +8,25 @@ import path from "node:path";
 import type { StrategyT, Action, LocatorOrEmpty } from "./types";
 
 /**
- * Check if target is a valid Playwright locator (not an empty string)
+ * True when the caller supplied no selector at all and wants pure AI detection.
+ * Only an empty (or whitespace-only) string means "AI-only" — a real selector
+ * string is a selector, not a missing target.
  */
-export function isValidLocator(target: LocatorOrEmpty): target is Locator {
-  return typeof target !== 'string' || target !== '';
+export function isAiOnlyTarget(target: LocatorOrEmpty): boolean {
+  return typeof target === "string" && target.trim() === "";
+}
+
+/**
+ * Resolve a user-supplied target into a real Playwright Locator.
+ * Selector strings are passed through `page.locator()`; Locators are returned
+ * as-is. AI-only targets have no selector to resolve, so they throw.
+ */
+export function toLocator(page: Page, target: LocatorOrEmpty): Locator {
+  if (typeof target !== "string") return target;
+  if (target.trim() === "") {
+    throw new Error("Cannot build a locator: no selector was provided (AI-only target)");
+  }
+  return page.locator(target);
 }
 
 /**
@@ -84,38 +99,88 @@ export async function waitForStable(page: Page): Promise<void> {
 }
 
 /**
- * Collect candidate elements from the page for AI analysis
+ * Upper bound on how many DOM elements are pulled out of the page in one pass.
+ * This is deliberately far larger than the number sent to the model: everything
+ * collected here is scored by `rankCandidates`, and only the top slice is sent.
+ * Truncating before ranking would hide the right element behind DOM order.
  */
-export async function collectCandidates(page: Page, action: Action, limit = 80) {
-  const selector =
-    action === "click" || action === "dblclick" || action === "hover"
-      ? [
-          // Native interactive elements
-          "button", "a", "label", "summary", "img",
-          // Input types that are clickable
-          "input[type='button']", "input[type='submit']", "input[type='reset']",
-          "input[type='checkbox']", "input[type='radio']", "input[type='image']",
-          "input[type='file']",
-          // Dropdowns and list items
-          "select", "option", "li",
-          // ARIA widget roles
-          "[role='button']", "[role='link']", "[role='menuitem']",
-          "[role='menuitemcheckbox']", "[role='menuitemradio']",
-          "[role='tab']", "[role='switch']", "[role='option']",
-          "[role='checkbox']", "[role='radio']",
-          "[role='combobox']", "[role='slider']", "[role='spinbutton']",
-          // ARIA structural roles that are often clickable
-          "[role='treeitem']", "[role='gridcell']", "[role='row']",
-          // Event-based and focusable
-          "[onclick]", "[ondblclick]",
-          "[onmouseenter]", "[onmouseover]",
-          "[tabindex]:not([tabindex='-1'])",
-          // Test-targeted elements
-          "[data-testid]", "[data-test]", "[data-test-id]", "[data-qa]", "[data-cy]",
-        ].join(",")
-      : action === "selectOption"
-      ? "select,[role='combobox'],[role='listbox'],option,[role='option'],[data-testid]"
-      : "input,textarea,[contenteditable='true'],[role='textbox'],select,[role='combobox'],[data-testid]";
+export const CANDIDATE_COLLECTION_CAP = 1000;
+
+// Elements a user can click, tap or hover.
+const CLICKABLE_PARTS = [
+  // Native interactive elements
+  "button", "a", "label", "summary", "img",
+  // Input types that are clickable
+  "input[type='button']", "input[type='submit']", "input[type='reset']",
+  "input[type='checkbox']", "input[type='radio']", "input[type='image']",
+  "input[type='file']",
+  // Dropdowns and list items
+  "select", "option", "li",
+  // ARIA widget roles
+  "[role='button']", "[role='link']", "[role='menuitem']",
+  "[role='menuitemcheckbox']", "[role='menuitemradio']",
+  "[role='tab']", "[role='switch']", "[role='option']",
+  "[role='checkbox']", "[role='radio']",
+  "[role='combobox']", "[role='slider']", "[role='spinbutton']",
+  // ARIA structural roles that are often clickable
+  "[role='treeitem']", "[role='gridcell']", "[role='row']",
+  // Event-based and focusable
+  "[onclick]", "[ondblclick]",
+  "[onmouseenter]", "[onmouseover]",
+  "[tabindex]:not([tabindex='-1'])",
+  // Test-targeted elements
+  "[data-testid]", "[data-test]", "[data-test-id]", "[data-qa]", "[data-cy]",
+];
+
+// Elements that accept typed input.
+const TEXT_ENTRY_PARTS = [
+  "input", "textarea", "[contenteditable='true']", "[role='textbox']",
+  "select", "[role='combobox']", "[data-testid]",
+];
+
+// Elements that expose a set of options.
+const CHOICE_PARTS = [
+  "select", "[role='combobox']", "[role='listbox']", "option", "[role='option']",
+  "[data-testid]",
+];
+
+const dedupe = (parts: string[]) => Array.from(new Set(parts)).join(",");
+
+/**
+ * The CSS selector used to gather candidates for a given action.
+ *
+ * `focus` unions the clickable and text-entry families because focus applies to
+ * both — a bare `<input type="text">` is not in the clickable set, and scoping
+ * focus to that set alone made the most obvious targets invisible to the model.
+ * `locate` unions everything, since it resolves elements for arbitrary use.
+ */
+export function candidateSelector(action: Action): string {
+  switch (action) {
+    case "click":
+    case "dblclick":
+    case "hover":
+      return dedupe(CLICKABLE_PARTS);
+    case "selectOption":
+      return dedupe(CHOICE_PARTS);
+    case "focus":
+      return dedupe([...CLICKABLE_PARTS, ...TEXT_ENTRY_PARTS]);
+    case "locate":
+      return dedupe([...CLICKABLE_PARTS, ...TEXT_ENTRY_PARTS, ...CHOICE_PARTS]);
+    case "fill":
+    case "check":
+    case "uncheck":
+    default:
+      return dedupe(TEXT_ENTRY_PARTS);
+  }
+}
+
+/**
+ * Collect candidate elements from the page for AI analysis.
+ * Returns everything matching (up to `limit`); ranking and truncation to the
+ * model's budget happen afterwards in `rankCandidates`.
+ */
+export async function collectCandidates(page: Page, action: Action, limit = CANDIDATE_COLLECTION_CAP) {
+  const selector = candidateSelector(action);
 
   return page.evaluate(({ selector, limit }) => {
     const els = Array.from(document.querySelectorAll(selector)).slice(0, limit);
@@ -279,16 +344,93 @@ export async function readJson<T>(file: string, fallback: T): Promise<T> {
 }
 
 /**
- * Write JSON file atomically
+ * Write JSON file atomically.
+ *
+ * The temp file name is unique per writer — Playwright runs one worker per
+ * process, and a shared temp path meant two workers could rename the same
+ * scratch file out from under each other.
  */
 export async function writeAtomic(file: string, data: unknown) {
   const dir = path.dirname(file);
   try {
     await fs.mkdir(dir, { recursive: true });
   } catch { /* ignore */ }
-  const tmp = file + ".tmp";
-  await fs.writeFile(tmp, JSON.stringify(data, null, 2), "utf8");
-  await fs.rename(tmp, file);
+  const tmp = `${file}.${process.pid}.${Math.random().toString(36).slice(2, 10)}.tmp`;
+  try {
+    await fs.writeFile(tmp, JSON.stringify(data, null, 2), "utf8");
+    await fs.rename(tmp, file);
+  } catch (err) {
+    await fs.rm(tmp, { force: true }).catch(() => {});
+    throw err;
+  }
+}
+
+/** How long a lock file may sit untouched before it is treated as abandoned. */
+const LOCK_STALE_MS = 10_000;
+const LOCK_RETRY_MS = 20;
+const LOCK_TIMEOUT_MS = 5_000;
+
+// Serialises updates within this process; the lock file serialises across them.
+const inProcessLocks = new Map<string, Promise<unknown>>();
+
+async function acquireFileLock(lockPath: string): Promise<void> {
+  const deadline = Date.now() + LOCK_TIMEOUT_MS;
+  for (;;) {
+    try {
+      const handle = await fs.open(lockPath, "wx");
+      await handle.close();
+      return;
+    } catch (err: any) {
+      if (err?.code !== "EEXIST") return; // Can't lock (read-only fs etc.) — proceed unlocked.
+      // Break a lock left behind by a crashed worker.
+      try {
+        const stat = await fs.stat(lockPath);
+        if (Date.now() - stat.mtimeMs > LOCK_STALE_MS) {
+          await fs.rm(lockPath, { force: true });
+          continue;
+        }
+      } catch { /* lock vanished — retry immediately */ }
+      if (Date.now() > deadline) return; // Give up waiting rather than hang the test run.
+      await new Promise(resolve => setTimeout(resolve, LOCK_RETRY_MS));
+    }
+  }
+}
+
+/**
+ * Read-modify-write a JSON file without clobbering concurrent writers.
+ *
+ * The file is re-read inside the lock, so entries another worker added after we
+ * loaded our in-memory copy survive. Returns the value that was written.
+ */
+export async function updateJson<T extends object>(
+  file: string,
+  mutate: (current: T) => T,
+): Promise<T> {
+  const previous = inProcessLocks.get(file) ?? Promise.resolve();
+  const run = previous.catch(() => {}).then(async () => {
+    const dir = path.dirname(file);
+    try {
+      await fs.mkdir(dir, { recursive: true });
+    } catch { /* ignore */ }
+
+    const lockPath = `${file}.lock`;
+    await acquireFileLock(lockPath);
+    try {
+      const current = await readJson<T>(file, {} as T);
+      const next = mutate(current);
+      await writeAtomic(file, next);
+      return next;
+    } finally {
+      await fs.rm(lockPath, { force: true }).catch(() => {});
+    }
+  });
+
+  inProcessLocks.set(file, run);
+  try {
+    return await run;
+  } finally {
+    if (inProcessLocks.get(file) === run) inProcessLocks.delete(file);
+  }
 }
 
 /**
@@ -308,6 +450,24 @@ export async function appendLog(reportFile: string, entry: unknown) {
 export function cacheKey(page: Page, action: Action, contextName: string): string {
   const u = new URL(page.url());
   return `${action}::${u.origin}${u.pathname}::${contextName}`;
+}
+
+/**
+ * Coerce a model-reported confidence into a 0-1 probability.
+ * Models are inconsistent about scale — some answer 0.85, some answer 85 — and
+ * an unparseable score is treated as no confidence rather than full confidence.
+ */
+export function normalizeConfidence(value: number | null | undefined): number {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return 0;
+  const scaled = n > 1 ? n / 100 : n;
+  return Math.min(1, Math.max(0, scaled));
+}
+
+/** True when a model-reported confidence clears the configured threshold. */
+export function meetsConfidence(value: number | null | undefined, minConfidence: number): boolean {
+  if (!minConfidence || minConfidence <= 0) return true;
+  return normalizeConfidence(value) >= minConfidence;
 }
 
 /**

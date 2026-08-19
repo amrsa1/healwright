@@ -4,9 +4,47 @@
  */
 
 import OpenAI from "openai";
-import { AIProvider, AIProviderConfig, GenerateHealPlanInput, HealPlanResult, DEFAULT_MODELS, cleanJson } from "./types";
+import {
+    AIProvider,
+    AIProviderConfig,
+    GenerateHealPlanInput,
+    HealPlanResult,
+    DEFAULT_MODELS,
+    cleanJson,
+    isReasoningModel,
+} from "./types";
 import { HealPlan } from "../types";
 import { healLog } from "../logger";
+
+/**
+ * Build the request body. Kept separate from the call so the shape is testable
+ * without an API key — notably the `reasoning` parameter, which is only valid
+ * for reasoning models and is a hard request error on the rest.
+ */
+export function buildOpenAIRequest(input: GenerateHealPlanInput, model: string): Record<string, unknown> {
+    const request: Record<string, unknown> = {
+        model,
+        input: [
+            { role: "system", content: input.systemPrompt },
+            { role: "user", content: input.userContent },
+        ],
+        text: {
+            format: {
+                type: "json_schema",
+                name: "HealPlan",
+                strict: true,
+                schema: input.jsonSchema,
+            },
+        },
+        store: false,
+    };
+
+    if (isReasoningModel(model)) {
+        request.reasoning = { effort: "low" };
+    }
+
+    return request;
+}
 
 export class OpenAIProvider implements AIProvider {
     readonly name = "openai" as const;
@@ -14,29 +52,18 @@ export class OpenAIProvider implements AIProvider {
     private model: string;
 
     constructor(config: AIProviderConfig) {
-        this.client = new OpenAI({ apiKey: config.apiKey });
+        this.client = new OpenAI({
+            apiKey: config.apiKey,
+            ...(config.baseURL ? { baseURL: config.baseURL } : {}),
+        });
         this.model = config.model ?? DEFAULT_MODELS.openai;
     }
 
     async generateHealPlan(input: GenerateHealPlanInput): Promise<HealPlanResult> {
         try {
-            const resp = await (this.client as any).responses.create({
-                model: this.model,
-                input: [
-                    { role: "system", content: input.systemPrompt },
-                    { role: "user", content: input.userContent },
-                ],
-                text: {
-                    format: {
-                        type: "json_schema",
-                        name: "HealPlan",
-                        strict: true,
-                        schema: input.jsonSchema,
-                    },
-                },
-                store: false,
-                reasoning: {"effort": "low"},
-            });
+            const resp = await this.client.responses.create(
+                buildOpenAIRequest(input, this.model) as any,
+            ) as any;
 
             const content = resp.output_text;
             healLog.aiResponse(content?.length ?? 0);

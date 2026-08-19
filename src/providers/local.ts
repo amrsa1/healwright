@@ -71,7 +71,7 @@ export class LocalProvider implements AIProvider {
     private model: string;
 
     constructor(config: AIProviderConfig) {
-        const host = config.apiKey || process.env.OLLAMA_HOST || "http://127.0.0.1:11434";
+        const host = config.baseURL || config.apiKey || process.env.OLLAMA_HOST || "http://127.0.0.1:11434";
         this.client = new Ollama({ host });
         this.model = config.model ?? DEFAULT_MODELS.local;
     }
