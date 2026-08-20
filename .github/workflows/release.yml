@@ -4,13 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       bump:
-        description: "Version bump type"
+        description: "Version bump type ('none' = publish the version already in package.json)"
         required: true
         type: choice
         options:
           - patch
           - minor
           - major
+          - none
         default: patch
       dry-run:
         description: "Dry run (skip npm publish & GitHub release)"
@@ -96,13 +97,19 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Bump version
+      - name: Resolve version
         id: version
         run: |
-          # Bump version in package.json, commit, and tag
-          NEW_VERSION=$(npm version ${{ inputs.bump }} -m "chore(release): v%s")
-          echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
-          echo "### 📦 Version bump: ${NEW_VERSION}" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ inputs.bump }}" = "none" ]; then
+            # Publish-only: reuse the version already committed, so a failed
+            # publish can be retried without bumping again.
+            VERSION="v$(node -p "require('./package.json').version")"
+            echo "### 📦 Publishing existing version: ${VERSION}" >> "$GITHUB_STEP_SUMMARY"
+          else
+            VERSION=$(npm version ${{ inputs.bump }} -m "chore(release): v%s")
+            echo "### 📦 Version bump: ${VERSION}" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Build package
         run: npm run build
@@ -111,7 +118,7 @@ jobs:
         run: npm pack --dry-run 2>&1 | tee /tmp/pack-output.txt
 
       - name: Push version commit and tag
-        if: ${{ inputs.dry-run == false }}
+        if: ${{ inputs.dry-run == false && inputs.bump != 'none' }}
         run: |
           git push origin HEAD
           git push origin ${{ steps.version.outputs.version }}
@@ -160,10 +167,14 @@ jobs:
             echo "**Install:** \`npm install healwright@${NUMBER}\`"
           } >> /tmp/notes.md
 
-          gh release create "$VERSION" \
-            --title "$VERSION" \
-            --notes-file /tmp/notes.md \
-            --verify-tag
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "Release $VERSION already exists — leaving its notes untouched."
+          else
+            gh release create "$VERSION" \
+              --title "$VERSION" \
+              --notes-file /tmp/notes.md \
+              --verify-tag
+          fi
 
           echo "### 🚀 Released $VERSION" >> "$GITHUB_STEP_SUMMARY"
           gh release view "$VERSION" --json url --jq .url >> "$GITHUB_STEP_SUMMARY"
@@ -180,5 +191,7 @@ jobs:
           cat /tmp/pack-output.txt >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           # Reset the version bump so it doesn't affect future runs
-          git reset --hard HEAD~1
-          git tag -d ${{ steps.version.outputs.version }} || true
+          if [ "${{ inputs.bump }}" != "none" ]; then
+            git reset --hard HEAD~1
+            git tag -d ${{ steps.version.outputs.version }} || true
+          fi
