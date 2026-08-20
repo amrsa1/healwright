@@ -125,9 +125,40 @@ jobs:
 
       - name: Publish to npm
         if: ${{ inputs.dry-run == false }}
-        run: npm publish --provenance --access public
         env:
+          # Fallback only. When Trusted Publishing is configured for the
+          # package, npm authenticates over OIDC and ignores this.
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          # Trusted Publishing needs npm 11.5.1+; the runner's bundled npm
+          # can be older, and an old npm silently falls back to the token.
+          npm install -g npm@latest
+          echo "npm $(npm --version)"
+
+          if npm publish --provenance --access public; then
+            exit 0
+          fi
+
+          echo ""
+          echo "──────────────────────────────────────────────────────────────"
+          echo "npm publish failed."
+          echo ""
+          echo "A 404 on PUT means the credential cannot publish this package."
+          echo "npm returns 404 rather than 403 so it does not leak whether a"
+          echo "package exists, so this is an auth problem, not a missing package."
+          echo ""
+          echo "Durable fix — Trusted Publishing (no token, works with 2FA):"
+          echo "  1. npmjs.com -> healwright -> Settings -> Trusted Publisher"
+          echo "  2. Publisher:  GitHub Actions"
+          echo "     Repository: ${{ github.repository }}"
+          echo "     Workflow:   release.yml"
+          echo "  3. Re-run this workflow with bump: none"
+          echo ""
+          echo "Stopgap — rotate the token:"
+          echo "  Create a Granular Access Token with read+write on healwright,"
+          echo "  then: gh secret set NPM_TOKEN"
+          echo "──────────────────────────────────────────────────────────────"
+          exit 1
 
       - name: Create GitHub Release
         if: ${{ inputs.dry-run == false }}
