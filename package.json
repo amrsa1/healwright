@@ -29,7 +29,8 @@
     "lint": "oxlint src tests",
     "prepublishOnly": "npm run build",
     "typecheck": "tsc --noEmit",
-    "build:types": "tsc --emitDeclarationOnly"
+    "build:types": "tsc --emitDeclarationOnly",
+    "publish:manual": "bash scripts/publish.sh"
   },
   "keywords": [
     "playwright",
