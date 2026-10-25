@@ -13,10 +13,27 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the runner process always read zero. Outcomes are now also written to
   `.self-heal/heal_summary.jsonl`, and only the current run is counted.
 - `heal.getLocator()` in `mode: 'warn'` writes its report to `heal_events.jsonl`, like the actions do.
+- The Anthropic provider defaults to `claude-sonnet-5-5`. The previous default was retired, so
+  `AI_PROVIDER=anthropic` without `AI_MODEL` failed.
+- Anthropic responses that open with thinking blocks are parsed. Structured output moves to
+  `output_config.format`, effort stays low on models that support it, and declined requests fall back
+  to another model on the Claude API.
+- Custom Anthropic endpoints keep receiving the key as `X-Api-Key`; SDK 1.x would otherwise send it as
+  `Authorization: Bearer`, which some gateways don't read.
+- Provider calls time out after 30 seconds, and the SDKs no longer retry underneath healwright's own
+  retries (Gemini alone could make 15 attempts per heal).
+- A cached heal for a `force: true` click is reused. Hover-only controls are never visible, so the
+  cache was always skipped and the model asked again.
+- A heal the model had no answer for is counted as failed in `getHealSummary()`.
+- Page URLs reach the model and the logs without their query string or fragment, which can carry
+  session tokens.
+- `heal.check()` and `heal.uncheck()` search custom checkboxes and switches (`role="checkbox"`,
+  `role="switch"`, labels), not only text inputs.
 
 ### Changed
 
 - Dependencies updated to their latest versions, including `@anthropic-ai/sdk` 1.x, `vitest` 5 and `tsup` 9.
+- Requires Node.js 22 or newer, which the current OpenAI SDK already needs.
 
 ### Docs
 
