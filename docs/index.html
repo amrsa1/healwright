@@ -4,375 +4,521 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Healwright | AI-Powered Self-Healing Locators</title>
+    <title>Healwright | Self-healing locators for Playwright</title>
     <meta name="description"
-        content="AI-powered self-healing locators for Playwright. When your selectors break, healwright figures out what you meant and finds the element anyway.">
+        content="When a Playwright selector breaks, healwright asks an AI model which element you meant, verifies the answer against the live page, and caches it for the next run.">
+    <meta name="theme-color" content="#0A1230">
 
     <!-- Open Graph / LinkedIn / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://amrsa1.github.io/healwright/">
-    <meta property="og:title" content="Healwright — AI-Powered Self-Healing Locators">
+    <meta property="og:title" content="Healwright — Self-healing locators for Playwright">
     <meta property="og:description"
         content="When your Playwright selectors break, healwright figures out what you meant and finds the element anyway.">
-    <meta property="og:image" content="https://amrsa1.github.io/healwright/banner.png">
-    <meta property="og:image:width" content="1344">
-    <meta property="og:image:height" content="768">
+    <meta property="og:image" content="https://amrsa1.github.io/healwright/social.png">
+    <meta property="og:image:width" content="2560">
+    <meta property="og:image:height" content="1280">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Healwright — AI-Powered Self-Healing Locators">
+    <meta name="twitter:title" content="Healwright — Self-healing locators for Playwright">
     <meta name="twitter:description"
         content="When your Playwright selectors break, healwright figures out what you meant and finds the element anyway.">
-    <meta name="twitter:image" content="https://amrsa1.github.io/healwright/banner.png">
+    <meta name="twitter:image" content="https://amrsa1.github.io/healwright/social.png">
 
-    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="owl.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Geologica:slnt,wght,CRSV,SHRP@-12..0,100..900,0..1,0..100&family=Martian+Mono:wdth,wght@75..112.5,100..800&display=swap"
         rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="site.css">
+    <script src="site.js" defer></script>
 </head>
 
 <body>
-    <div class="bg-grid"></div>
-    <div class="bg-glow"></div>
+    <a class="skip" href="#main">Skip to content</a>
 
-    <nav class="navbar">
-        <div class="container nav-content">
-            <div class="logo">
-                <img src="./owl.png" alt="Healwright Icon" class="nav-logo-img">
-                <span class="brand-text">Healwright</span>
-            </div>
-            <div class="nav-links">
-                <a href="#features">Features</a>
-                <a href="#how-it-works">How it Works</a>
-                <a href="#demo">Demo</a>
-                <a href="https://github.com/amrsa1/healwright" class="btn btn-secondary"><i data-lucide="github"></i>
-                    GitHub</a>
-                <a href="get-started.html" class="btn btn-primary">Get Started</a>
-            </div>
-        </div>
-    </nav>
-
-    <header class="hero">
-        <div class="container hero-content">
-            <div class="hero-text">
-                <img src="./pw.png" class="hero-bg-logo" alt="">
-                <div class="badge-animated">
-                    <span class="badge-dot"></span>
-                    Now with AI-Only Mode
-                </div>
-                <h1>Self-Healing Tests for <span class="gradient-text">Playwright</span></h1>
-                <p class="hero-subtitle">
-                    Don't let broken selectors break your build. Healwright uses AI to understand your intent and fix
-                    locators at runtime.
-                </p>
-                <div class="hero-cta">
-                    <div class="command-block">
-                        <span class="prompt">$</span> npm install healwright
-                        <button class="copy-btn" onclick="navigator.clipboard.writeText('npm install healwright')">
-                            <i data-lucide="copy"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div class="hero-visual">
-                <div class="glass-card main-card">
-                    <div class="card-header">
-                        <span class="dot red"></span>
-                        <span class="dot yellow"></span>
-                        <span class="dot green"></span>
-                    </div>
-                    <div class="code-preview">
-                        <pre><code class="language-typescript"><span class="keyword">test</span>(<span class="string">'login flow'</span>, <span class="keyword">async</span> ({ page }) => {
-  <span class="comment">// Self-healing locator with fallback</span>
-  <span class="keyword">await</span> page.heal.<span class="function">locator</span>(
-    <span class="selector">'.submit-btn'</span>,
-    <span class="string">'Submit button on form'</span>
-  ).<span class="function">click</span>();
-  
-  <span class="comment">// Or just describe it, no selector needed!</span>
-  <span class="keyword">await</span> page.heal.<span class="function">fill</span>(
-    <span class="string">''</span>, 
-    <span class="string">'Email input field'</span>, 
-    <span class="string">'user@example.com'</span>
-  );
-});</code></pre>
-                    </div>
-                    <div class="healing-overlay">
-                        <div class="healing-status">
-                            <i data-lucide="sparkles"></i>
-                            <span>AI Healing Active...</span>
-                        </div>
-                    </div>
-                </div>
+    <header class="nav">
+        <div class="wrap nav-inner">
+            <a class="brand" href="./">
+                <img src="owl.png" alt="" width="26" height="31">
+                <span>Healwright</span>
+            </a>
+            <nav class="nav-links" aria-label="Sections">
+                <a href="#how">How it heals</a>
+                <a href="#guardrails">Guardrails</a>
+                <a href="#api">API</a>
+                <a href="#providers">Providers</a>
+            </nav>
+            <div class="nav-actions">
+                <a class="btn btn-ghost" href="https://github.com/amrsa1/healwright">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+                        <path
+                            d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.69 1.25 3.35.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a10.9 10.9 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.69 5.39-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z" />
+                    </svg>
+                    <span>GitHub</span>
+                </a>
+                <a class="btn btn-solid" href="get-started.html">Get started</a>
             </div>
         </div>
     </header>
 
-    <div class="promo-bar">
-        <div class="container promo-content">
-            <div class="promo-item" style="--d:0">
-                <span class="promo-icon"><i data-lucide="check-circle"></i></span>
-                <span class="promo-text">No more broken locators</span>
-            </div>
-            <div class="promo-item" style="--d:1">
-                <span class="promo-icon"><i data-lucide="check-circle"></i></span>
-                <span class="promo-text">No more flaky tests</span>
-            </div>
-            <div class="promo-item" style="--d:2">
-                <span class="promo-icon"><i data-lucide="check-circle"></i></span>
-                <span class="promo-text">No more time to waste</span>
-            </div>
-        </div>
-    </div>
-
-    <section id="features" class="features">
-        <div class="container">
-            <h2 class="section-title">Forward-Thinking <span class="gradient-text">Testing</span></h2>
-            <div class="grid feature-grid">
-                <div class="feature-card">
-                    <div class="icon-box">
-                        <i data-lucide="zap"></i>
-                    </div>
-                    <h3>Self-Healing Locators</h3>
-                    <p>When formatted structure changes, our AI analyzes the DOM to find the element you actually meant.
-                    </p>
-                </div>
-                <div class="feature-card">
-                    <div class="icon-box">
-                        <i data-lucide="link"></i>
-                    </div>
-                    <h3>Chainable Locators</h3>
-                    <p>Use <code>heal.locator(selector, desc)</code> for clean, chainable syntax with built-in fallback.
-                    </p>
-                </div>
-                <div class="feature-card">
-                    <div class="icon-box">
-                        <i data-lucide="coffee"></i>
-                    </div>
-                    <h3>Too Lazy? No Problem</h3>
-                    <p>Leave the locator empty and just describe the element. Healwright will find it for you.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="icon-box">
-                        <i data-lucide="mouse-pointer-click"></i>
-                    </div>
-                    <h3>Force Click Hidden</h3>
-                    <p>Click hover-dependent elements with <code>{ force: true }</code>. No more flaky hover tests.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="icon-box">
-                        <i data-lucide="hard-drive"></i>
-                    </div>
-                    <h3>Smart Caching</h3>
-                    <p>Healed selectors are cached locally. You don't burn API credits on subsequent runs.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="icon-box">
-                        <i data-lucide="layers"></i>
-                    </div>
-                    <h3>Drop-in Replacement</h3>
-                    <p>Works seamlessly with your existing Playwright setup. Mix and match healed and standard locators.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="providers">
-        <div class="container">
-            <h2 class="section-title">Supported <span class="gradient-text">AI Providers</span></h2>
-            <p class="section-subtitle" style="max-width: 600px; margin-left: auto; margin-right: auto;">
-                Use the cloud or go fully offline. Pick the model that fits your team, budget, and privacy needs.
-            </p>
-            <div class="provider-grid">
-                <!-- OpenAI -->
-                <div class="provider-card">
-                    <svg class="provider-icon" viewBox="0 0 24 24" fill="currentColor"
-                        xmlns="http://www.w3.org/2000/svg">
-                        <path
-                            d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z" />
-                    </svg>
-                    <span class="provider-name">OpenAI</span>
-                </div>
-
-                <!-- Anthropic -->
-                <div class="provider-card">
-                    <svg class="provider-icon" viewBox="0 0 24 24" fill="currentColor"
-                        xmlns="http://www.w3.org/2000/svg">
-                        <path
-                            d="M17.3041 3.541h-3.6718l6.696 16.918H24Zm-10.6082 0L0 20.459h3.7442l1.3693-3.5527h7.0052l1.3693 3.5528h3.7442L10.5363 3.5409Zm-.3712 10.2232 2.2914-5.9456 2.2914 5.9456Z" />
-                    </svg>
-                    <span class="provider-name">Anthropic</span>
-                </div>
-
-                <!-- Google Gemini -->
-                <div class="provider-card">
-                    <svg class="provider-icon" viewBox="0 0 24 24" fill="currentColor"
-                        xmlns="http://www.w3.org/2000/svg">
-                        <path
-                            d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81" />
-                    </svg>
-                    <span class="provider-name">Gemini</span>
-                </div>
-
-                <!-- Local / Ollama -->
-                <div class="provider-card">
-                    <svg class="provider-icon" viewBox="0 0 24 24" fill="currentColor"
-                        xmlns="http://www.w3.org/2000/svg">
-                        <path
-                            d="M16.361 10.26a.894.894 0 0 0-.558.47l-.072.148.001.207c0 .193.004.217.059.353.076.193.152.312.291.448.24.238.51.3.872.205a.86.86 0 0 0 .517-.436.752.752 0 0 0 .08-.498c-.064-.453-.33-.782-.724-.897a1.06 1.06 0 0 0-.466 0zm-9.203.005c-.305.096-.533.32-.65.639a1.187 1.187 0 0 0-.06.52c.057.309.31.59.598.667.362.095.632.033.872-.205.14-.136.215-.255.291-.448.055-.136.059-.16.059-.353l.001-.207-.072-.148a.894.894 0 0 0-.565-.472 1.02 1.02 0 0 0-.474.007Zm4.184 2c-.131.071-.223.25-.195.383.031.143.157.288.353.407.105.063.112.072.117.136.004.038-.01.146-.029.243-.02.094-.036.194-.036.222.002.074.07.195.143.253.064.052.076.054.255.059.164.005.198.001.264-.03.169-.082.212-.234.15-.525-.052-.243-.042-.28.087-.355.137-.08.281-.219.324-.314a.365.365 0 0 0-.175-.48.394.394 0 0 0-.181-.033c-.126 0-.207.03-.355.124l-.085.053-.053-.032c-.219-.13-.259-.145-.391-.143a.396.396 0 0 0-.193.032zm.39-2.195c-.373.036-.475.05-.654.086-.291.06-.68.195-.951.328-.94.46-1.589 1.226-1.787 2.114-.04.176-.045.234-.045.53 0 .294.005.357.043.524.264 1.16 1.332 2.017 2.714 2.173.3.033 1.596.033 1.896 0 1.11-.125 2.064-.727 2.493-1.571.114-.226.169-.372.22-.602.039-.167.044-.23.044-.523 0-.297-.005-.355-.045-.531-.288-1.29-1.539-2.304-3.072-2.497a6.873 6.873 0 0 0-.855-.031zm.645.937a3.283 3.283 0 0 1 1.44.514c.223.148.537.458.671.662.166.251.26.508.303.82.02.143.01.251-.043.482-.08.345-.332.705-.672.957a3.115 3.115 0 0 1-.689.348c-.382.122-.632.144-1.525.138-.582-.006-.686-.01-.853-.042-.57-.107-1.022-.334-1.35-.68-.264-.28-.385-.535-.45-.946-.03-.192.025-.509.137-.776.136-.326.488-.73.836-.963.403-.269.934-.46 1.422-.512.187-.02.586-.02.773-.002zm-5.503-11a1.653 1.653 0 0 0-.683.298C5.617.74 5.173 1.666 4.985 2.819c-.07.436-.119 1.04-.119 1.503 0 .544.064 1.24.155 1.721.02.107.031.202.023.208a8.12 8.12 0 0 1-.187.152 5.324 5.324 0 0 0-.949 1.02 5.49 5.49 0 0 0-.94 2.339 6.625 6.625 0 0 0-.023 1.357c.091.78.325 1.438.727 2.04l.13.195-.037.064c-.269.452-.498 1.105-.605 1.732-.084.496-.095.629-.095 1.294 0 .67.009.803.088 1.266.095.555.288 1.143.503 1.534.071.128.243.393.264.407.007.003-.014.067-.046.141a7.405 7.405 0 0 0-.548 1.873c-.062.417-.071.552-.071.991 0 .56.031.832.148 1.279L3.42 24h1.478l-.05-.091c-.297-.552-.325-1.575-.068-2.597.117-.472.25-.819.498-1.296l.148-.29v-.177c0-.165-.003-.184-.057-.293a.915.915 0 0 0-.194-.25 1.74 1.74 0 0 1-.385-.543c-.424-.92-.506-2.286-.208-3.451.124-.486.329-.918.544-1.154a.787.787 0 0 0 .223-.531c0-.195-.07-.355-.224-.522a3.136 3.136 0 0 1-.817-1.729c-.14-.96.114-2.005.69-2.834.563-.814 1.353-1.336 2.237-1.475.199-.033.57-.028.776.01.226.04.367.028.512-.041.179-.085.268-.19.374-.431.093-.215.165-.333.36-.576.234-.29.46-.489.822-.729.413-.27.884-.467 1.352-.561.17-.035.25-.04.569-.04.319 0 .398.005.569.04a4.07 4.07 0 0 1 1.914.997c.117.109.398.457.488.602.034.057.095.177.132.267.105.241.195.346.374.43.14.068.286.082.503.045.343-.058.607-.053.943.016 1.144.23 2.14 1.173 2.581 2.437.385 1.108.276 2.267-.296 3.153-.097.15-.193.27-.333.419-.301.322-.301.722-.001 1.053.493.539.801 1.866.708 3.036-.062.772-.26 1.463-.533 1.854a2.096 2.096 0 0 1-.224.258.916.916 0 0 0-.194.25c-.054.109-.057.128-.057.293v.178l.148.29c.248.476.38.823.498 1.295.253 1.008.231 2.01-.059 2.581a.845.845 0 0 0-.044.098c0 .006.329.009.732.009h.73l.02-.074.036-.134c.019-.076.057-.3.088-.516.029-.217.029-1.016 0-1.258-.11-.875-.295-1.57-.597-2.226-.032-.074-.053-.138-.046-.141.008-.005.057-.074.108-.152.376-.569.607-1.284.724-2.228.031-.26.031-1.378 0-1.628-.083-.645-.182-1.082-.348-1.525a6.083 6.083 0 0 0-.329-.7l-.038-.064.131-.194c.402-.604.636-1.262.727-2.04a6.625 6.625 0 0 0-.024-1.358 5.512 5.512 0 0 0-.939-2.339 5.325 5.325 0 0 0-.95-1.02 8.097 8.097 0 0 1-.186-.152.692.692 0 0 1 .023-.208c.208-1.087.201-2.443-.017-3.503-.19-.924-.535-1.658-.98-2.082-.354-.338-.716-.482-1.15-.455-.996.059-1.8 1.205-2.116 3.01a6.805 6.805 0 0 0-.097.726c0 .036-.007.066-.015.066a.96.96 0 0 1-.149-.078A4.857 4.857 0 0 0 12 3.03c-.832 0-1.687.243-2.456.698a.958.958 0 0 1-.148.078c-.008 0-.015-.03-.015-.066a6.71 6.71 0 0 0-.097-.725C8.997 1.392 8.337.319 7.46.048a2.096 2.096 0 0 0-.585-.041Zm.293 1.402c.248.197.523.759.682 1.388.03.113.06.244.069.292.007.047.026.152.041.233.067.365.098.76.102 1.24l.002.475-.12.175-.118.178h-.278c-.324 0-.646.041-.954.124l-.238.06c-.033.007-.038-.003-.057-.144a8.438 8.438 0 0 1 .016-2.323c.124-.788.413-1.501.696-1.711.067-.05.079-.049.157.013zm9.825-.012c.17.126.358.46.498.888.28.854.36 2.028.212 3.145-.019.14-.024.151-.057.144l-.238-.06a3.693 3.693 0 0 0-.954-.124h-.278l-.119-.178-.119-.175.002-.474c.004-.669.066-1.19.214-1.772.157-.623.434-1.185.68-1.382.078-.062.09-.063.159-.012z" />
-                    </svg>
-                    <span class="provider-name">Ollama</span>
-                    <span class="provider-badge">Local LLM</span>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="how-it-works" class="how-it-works">
-        <div class="container">
-            <h2 class="section-title">How It <span class="gradient-text">Works</span></h2>
-            <p class="section-subtitle">Your locator breaks — Healwright fixes it automatically.</p>
-
-            <!-- Animated Pipeline -->
-            <div class="pipeline" id="pipeline">
-
-                <!-- Step 1 -->
-                <div class="pipe-step" style="--i:0">
-                    <div class="pipe-icon pipe-icon--blue"><i data-lucide="play"></i></div>
-                    <div class="pipe-body">
-                        <h3>Test Runs</h3>
-                        <p>Your test calls an action — <code>click</code>, <code>fill</code>, <code>hover</code>, etc.
-                            Healwright tries the original locator first. If it works, the test continues with <span
-                                class="txt-green">zero overhead</span>.</p>
-                    </div>
-                </div>
-
-                <!-- Step 2 -->
-                <div class="pipe-step" style="--i:1">
-                    <div class="pipe-icon pipe-icon--amber"><i data-lucide="search-x"></i></div>
-                    <div class="pipe-body">
-                        <h3>Locator Breaks</h3>
-                        <p>When the locator can't find the element, the healing pipeline kicks in.
-                            A local cache is checked first — if the element was healed before, it's reused instantly.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Step 3 -->
-                <div class="pipe-step" style="--i:2">
-                    <div class="pipe-icon pipe-icon--purple"><i data-lucide="brain"></i>
-                        <span class="ai-ring"></span>
-                    </div>
-                    <div class="pipe-body">
-                        <h3>AI Finds the Element</h3>
-                        <p>DOM candidates are sent to your AI provider. It returns the best matching locator strategy,
-                            which is validated to ensure it resolves to exactly one visible element.</p>
-                        <div class="provider-row">
-                            <span class="provider-chip">OpenAI</span>
-                            <span class="provider-chip">Claude</span>
-                            <span class="provider-chip">Gemini</span>
-                            <span class="provider-chip provider-chip--local">Ollama (Local)</span>
-                        </div>
-                        <div class="strategy-row">
-                            <span class="strat-chip">testid</span>
-                            <span class="strat-chip">role</span>
-                            <span class="strat-chip">label</span>
-                            <span class="strat-chip">placeholder</span>
-                            <span class="strat-chip">text</span>
-                            <span class="strat-chip">css</span>
+    <main id="main">
+        <!-- ============ Hero ============ -->
+        <section class="hero">
+            <div class="wrap">
+                <div class="hero-top">
+                    <h1 class="title" id="title">
+                        <span class="title-real">Your selector broke.<br> Your test didn't.</span>
+                        <span class="title-half title-top" aria-hidden="true">Your selector broke.<br> Your test
+                            didn't.</span>
+                        <span class="title-half title-bottom" aria-hidden="true">Your selector broke.<br> Your test
+                            didn't.</span>
+                        <svg class="title-seam" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                            <polyline points="0,37 9,46 20,40 31,51 43,45 55,57 66,52 78,63 89,57 100,64" />
+                        </svg>
+                    </h1>
+                    <div class="hero-side">
+                        <p class="lede">When a Playwright locator stops matching, healwright asks an AI model which
+                            element you meant, checks the answer against the live page, and caches it. The next run
+                            doesn't call the model at all.</p>
+                        <div class="hero-actions">
+                            <button class="install" type="button" data-copy="npm install healwright">
+                                <span class="install-prompt" aria-hidden="true">$</span>
+                                <code>npm install healwright</code>
+                                <span class="install-state" aria-live="polite">Copy</span>
+                            </button>
+                            <a class="btn btn-ghost btn-lg" href="get-started.html">Read the guide</a>
                         </div>
                     </div>
                 </div>
 
-                <!-- Step 4 -->
-                <div class="pipe-step pipe-step--final" style="--i:3">
-                    <div class="pipe-icon pipe-icon--green"><i data-lucide="circle-check"></i></div>
-                    <div class="pipe-body">
-                        <h3>Healed & Cached</h3>
-                        <p>The action executes with the healed locator and the strategy is cached to disk.
-                            Future runs skip AI entirely — your CI stays <span class="txt-green">green</span>.</p>
+                <!-- The heal, acted out -->
+                <figure class="stage" id="stage" data-mood="idle">
+                    <div class="scene" aria-hidden="true">
+                        <div class="pane editor">
+                            <div class="pane-bar">
+                                <span class="file-tab">checkout.spec.ts</span>
+                            </div>
+                            <div class="code">
+                                <span class="line"><span class="tk-k">test</span>(<span class="tk-s">'checkout'</span>, <span class="tk-k">async</span> ({ page }) =&gt; {</span>
+                                <span class="line">  <span class="tk-k">await</span> page.heal.<span class="tk-f">fill</span>(<span class="tk-s">'#email'</span>,</span>
+                                <span class="line">    <span class="tk-s">'Email field'</span>, <span class="tk-s">'ada@example.com'</span>);</span>
+                                <span class="lens" id="lens"><span class="lens-mark">healed</span> <span id="lens-text">getByRole('button', { name: 'Place order' })</span></span>
+                                <span class="line">  <span class="tk-k">await</span> page.heal.<span class="tk-f">click</span>(</span>
+                                <span class="line">    <span class="sel" id="tok">'#buy-now'</span>,<span class="diag" id="diag">0 matches in 1s</span></span>
+                                <span class="line">    <span class="tk-s">'Place order button'</span></span>
+                                <span class="line">  );</span>
+                                <span class="line">  <span class="tk-k">await</span> <span class="tk-f">expect</span>(page.<span class="tk-f">getByText</span>(</span>
+                                <span class="line">    <span class="tk-s">'Order confirmed'</span>)).<span class="tk-f">toBeVisible</span>();</span>
+                                <span class="line">});</span>
+                            </div>
+                            <div class="status">
+                                <span>.self-heal/healed_locators.json</span>
+                                <span class="status-cache" id="cache-count">3 entries</span>
+                            </div>
+                        </div>
+
+                        <div class="pane browser">
+                            <div class="pane-bar">
+                                <span class="url">shop.example/checkout</span>
+                                <span class="deploy" id="deploy">Redesign shipped</span>
+                            </div>
+                            <div class="app" id="app" data-variant="0">
+                                <div class="app-head">
+                                    <span class="app-logo">Lumen</span>
+                                    <span class="app-step">Checkout</span>
+                                </div>
+                                <div class="app-grid">
+                                    <div class="ui-email" data-el="email">
+                                        <span class="ui-label">Email</span>
+                                        <span class="ui-input" data-hit>ada@example.com</span>
+                                    </div>
+                                    <div class="ui-items" data-el="items">
+                                        <div class="ui-row"><span>Desk lamp</span><span>$48.00</span></div>
+                                        <div class="ui-row"><span>Linen shade</span><span>$22.00</span></div>
+                                        <div class="ui-row"><span>Payment</span><span>Visa ending 4242</span></div>
+                                        <div class="ui-row ui-total"><span>Total</span><span>$70.00</span></div>
+                                    </div>
+                                    <span class="ui-cont" data-el="cont" data-hit>Continue shopping</span>
+                                    <span class="ui-btn ui-coupon" data-el="coupon" data-hit>Apply coupon</span>
+                                    <span class="ui-btn ui-target" data-el="target" data-hit id="target"><span
+                                            id="target-label">Place order</span></span>
+                                    <span class="ui-confirm" data-el="confirm" id="confirm">Order confirmed</span>
+                                </div>
+                                <div class="cands" id="cands"></div>
+                                <div class="scanline" id="scanline"></div>
+                                <div class="verify" id="verify"></div>
+                                <div class="attr" id="attr"></div>
+                            </div>
+                        </div>
+
+                        <div class="pane term">
+                            <div class="pane-bar"><span>Terminal</span></div>
+                            <div class="term-body" id="term-body"></div>
+                        </div>
+
+                        <svg class="thread" id="thread" data-mode="connected">
+                            <path class="th th-main" id="th-main" />
+                            <path class="th th-half" id="th-a" />
+                            <path class="th th-half" id="th-b" />
+                            <g class="th-stitches" id="th-stitches"></g>
+                            <circle class="th-dot" id="th-start" r="3.5" />
+                            <circle class="th-dot" id="th-end" r="3.5" />
+                        </svg>
+                    </div>
+
+                    <figcaption class="stage-bar">
+                        <ol class="phases" aria-label="Healing steps">
+                            <li class="phase" data-phase="run"><span class="phase-n">1</span>Run</li>
+                            <li class="phase" data-phase="break"><span class="phase-n">2</span>Break</li>
+                            <li class="phase" data-phase="scan"><span class="phase-n">3</span>Scan</li>
+                            <li class="phase" data-phase="verify"><span class="phase-n">4</span>Verify</li>
+                            <li class="phase" data-phase="heal"><span class="phase-n">5</span>Heal</li>
+                            <li class="phase" data-phase="cache"><span class="phase-n">6</span>Cache</li>
+                        </ol>
+                        <div class="stage-controls">
+                            <button class="ctl" type="button" id="redesign">Ship another redesign</button>
+                            <button class="ctl" type="button" id="pause" aria-pressed="false">Pause</button>
+                        </div>
+                        <p class="sr-only">Animated demo. A test clicks a Place order button using the selector
+                            #buy-now. A redesign ships and the selector matches nothing. Healwright scores the
+                            page's interactive elements, the model picks the button, the answer is checked for a
+                            single visible match with enough confidence, the click runs, and the fix is cached so
+                            the next run skips the model.</p>
+                    </figcaption>
+                </figure>
+            </div>
+        </section>
+
+        <!-- ============ Pipeline ============ -->
+        <section class="section" id="how">
+            <div class="wrap pipeline">
+                <div class="section-head pipeline-head">
+                    <h2>Most runs stop at step one</h2>
+                    <p>Healing only starts when your own locator fails. After the first heal the fix is cached, so
+                        the model is asked once per element, not once per run.</p>
+                </div>
+                <ol class="spine" id="spine">
+                    <li class="step">
+                        <span class="step-node" aria-hidden="true">1</span>
+                        <h3>Your locator runs first</h3>
+                        <p>healwright tries your selector exactly as written. If the element shows up within a
+                            second, the action runs and nothing else happens.</p>
+                        <code class="opt">quickTimeout: 1000</code>
+                    </li>
+                    <li class="step">
+                        <span class="step-node" aria-hidden="true">2</span>
+                        <h3>The cache is checked</h3>
+                        <p>A fix found earlier for this element on this page is tried next. Commit
+                            <code>.self-heal/healed_locators.json</code> and your teammates and CI reuse it too.</p>
+                        <code class="opt">cacheFile</code>
+                    </li>
+                    <li class="step">
+                        <span class="step-node" aria-hidden="true">3</span>
+                        <h3>The page is narrowed down</h3>
+                        <p>Up to 1,000 interactive elements are collected and scored against your description.
+                            Only the best 40 are sent to the model, so the right one isn't lost to DOM order.</p>
+                        <code class="opt">maxCandidates: 40</code>
+                    </li>
+                    <li class="step">
+                        <span class="step-node" aria-hidden="true">4</span>
+                        <h3>The model suggests locators</h3>
+                        <p>It answers with up to three Playwright strategies, such as a test id, a role and name, or
+                            a label, each with a confidence score, in JSON that has to match a fixed schema.</p>
+                        <code class="opt">AI_PROVIDER</code>
+                    </li>
+                    <li class="step">
+                        <span class="step-node" aria-hidden="true">5</span>
+                        <h3>Every suggestion is checked</h3>
+                        <p>A suggestion is accepted only if it matches exactly one element, that element is
+                            visible, and its confidence clears your threshold.</p>
+                        <code class="opt">minConfidence</code>
+                    </li>
+                    <li class="step">
+                        <span class="step-node" aria-hidden="true">6</span>
+                        <h3>The action runs and the fix is saved</h3>
+                        <p>The working locator goes into the cache, and the heal is written to
+                            <code>heal_events.jsonl</code> with the model's reason and token count.</p>
+                        <code class="opt">reportFile</code>
+                    </li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- ============ Guardrails ============ -->
+        <section class="section" id="guardrails">
+            <div class="wrap">
+                <div class="section-head">
+                    <h2>Keep healing honest</h2>
+                    <p>A heal that lands on the wrong element still passes. Decide how far the model is trusted,
+                        and keep a record of every heal.</p>
+                </div>
+
+                <div class="guard" id="guard" data-tone="heal">
+                    <div class="guard-controls">
+                        <fieldset class="seg">
+                            <legend>Mode</legend>
+                            <div class="seg-options">
+                                <label class="seg-option">
+                                    <input type="radio" name="mode" value="heal" checked>
+                                    <span><b>heal</b><small>Find it and continue</small></span>
+                                </label>
+                                <label class="seg-option">
+                                    <input type="radio" name="mode" value="warn">
+                                    <span><b>warn</b><small>Report only</small></span>
+                                </label>
+                                <label class="seg-option">
+                                    <input type="radio" name="mode" value="off">
+                                    <span><b>off</b><small>No healing</small></span>
+                                </label>
+                            </div>
+                        </fieldset>
+
+                        <div class="range">
+                            <label for="minconf">minConfidence <output id="minconf-out"
+                                    for="minconf">0.80</output></label>
+                            <input type="range" id="minconf" min="0" max="1" step="0.05" value="0.8">
+                            <p class="range-note">In this example the model's best match scores <b>0.86</b>.</p>
+                        </div>
+                    </div>
+
+                    <div class="guard-result" aria-live="polite">
+                        <p class="result-title" id="g-title">Healed. The click runs and the test carries on.</p>
+                        <p class="result-body" id="g-body">The fix is cached for the next run and written to
+                            heal_events.jsonl with the model's reason and token count.</p>
+                        <pre class="result-log"><code id="g-log"></code></pre>
+                    </div>
+
+                    <pre class="guard-code"><code id="g-code"></code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ API ============ -->
+        <section class="section" id="api">
+            <div class="wrap">
+                <div class="section-head">
+                    <h2>Fits the Playwright you already write</h2>
+                    <p>Wrap the page fixture once. After that every action takes a selector and a plain-English
+                        description, and when you leave the selector empty the description is enough.</p>
+                </div>
+
+                <div class="api">
+                    <div class="tabs" role="tablist" aria-label="API examples">
+                        <button class="tab" role="tab" id="tab-setup" aria-controls="panel-setup"
+                            aria-selected="true" type="button">Setup</button>
+                        <button class="tab" role="tab" id="tab-actions" aria-controls="panel-actions"
+                            aria-selected="false" tabindex="-1" type="button">heal.click</button>
+                        <button class="tab" role="tab" id="tab-chain" aria-controls="panel-chain"
+                            aria-selected="false" tabindex="-1" type="button">heal.locator</button>
+                        <button class="tab" role="tab" id="tab-get" aria-controls="panel-get"
+                            aria-selected="false" tabindex="-1" type="button">heal.getLocator</button>
+                    </div>
+
+                    <div class="tabpanel" role="tabpanel" id="panel-setup" aria-labelledby="tab-setup">
+                        <div class="tab-note">
+                            <h3>Wrap the page fixture</h3>
+                            <p>One fixture file, then import <code>test</code> from it instead of
+                                <code>@playwright/test</code>. Healing turns on with <code>SELF_HEAL=1</code>.</p>
+                        </div>
+<pre class="tab-code"><code><span class="tk-c">// fixtures.ts</span>
+<span class="tk-k">import</span> { test <span class="tk-k">as</span> base } <span class="tk-k">from</span> <span class="tk-s">'@playwright/test'</span>;
+<span class="tk-k">import</span> { createHealingFixture, HealPage } <span class="tk-k">from</span> <span class="tk-s">'healwright'</span>;
+
+<span class="tk-k">export const</span> test = base.<span class="tk-f">extend</span>&lt;{ page: HealPage }&gt;(
+  <span class="tk-f">createHealingFixture</span>()
+);
+
+<span class="tk-c">// SELF_HEAL=1 AI_API_KEY=… npx playwright test</span></code></pre>
+                    </div>
+
+                    <div class="tabpanel" role="tabpanel" id="panel-actions" aria-labelledby="tab-actions" hidden>
+                        <div class="tab-note">
+                            <h3>Describe what you mean</h3>
+                            <p><code>click</code>, <code>dblclick</code>, <code>fill</code>, <code>check</code>,
+                                <code>uncheck</code>, <code>hover</code>, <code>focus</code> and
+                                <code>selectOption</code> all take a selector and a description.</p>
+                        </div>
+<pre class="tab-code"><code><span class="tk-k">await</span> page.heal.<span class="tk-f">click</span>(<span class="tk-s">'#buy-now'</span>, <span class="tk-s">'Place order button'</span>);
+
+<span class="tk-c">// No selector: the description is enough</span>
+<span class="tk-k">await</span> page.heal.<span class="tk-f">fill</span>(<span class="tk-s">''</span>, <span class="tk-s">'Email field'</span>, <span class="tk-s">'ada@example.com'</span>);
+
+<span class="tk-c">// Controls that only appear on hover</span>
+<span class="tk-k">await</span> page.heal.<span class="tk-f">hover</span>(<span class="tk-s">''</span>, <span class="tk-s">'Todo item'</span>);
+<span class="tk-k">await</span> page.heal.<span class="tk-f">click</span>(<span class="tk-s">''</span>, <span class="tk-s">'Delete button'</span>, { force: <span class="tk-k">true</span> });</code></pre>
+                    </div>
+
+                    <div class="tabpanel" role="tabpanel" id="panel-chain" aria-labelledby="tab-chain" hidden>
+                        <div class="tab-note">
+                            <h3>Keep the locator style</h3>
+                            <p><code>heal.locator()</code> reads like <code>page.locator()</code>, with the
+                                description held in reserve for when the selector stops matching.</p>
+                        </div>
+<pre class="tab-code"><code><span class="tk-k">await</span> page.heal
+  .<span class="tk-f">locator</span>(<span class="tk-s">'.new-todo'</span>, <span class="tk-s">'New todo input'</span>)
+  .<span class="tk-f">fill</span>(<span class="tk-s">'Buy milk'</span>);
+
+<span class="tk-k">await</span> page.heal
+  .<span class="tk-f">locator</span>(<span class="tk-s">'.toggle-all'</span>, <span class="tk-s">'Mark all as done'</span>)
+  .<span class="tk-f">check</span>();</code></pre>
+                    </div>
+
+                    <div class="tabpanel" role="tabpanel" id="panel-get" aria-labelledby="tab-get" hidden>
+                        <div class="tab-note">
+                            <h3>Get a real Locator back</h3>
+                            <p><code>heal.getLocator()</code> returns a plain Playwright Locator, so
+                                <code>expect()</code> assertions, <code>.nth()</code> and <code>.filter()</code> all
+                                work on it.</p>
+                        </div>
+<pre class="tab-code"><code><span class="tk-k">const</span> badge = <span class="tk-k">await</span> page.heal.<span class="tk-f">getLocator</span>(
+  <span class="tk-s">'.cart-count'</span>,
+  <span class="tk-s">'Cart item count'</span>
+);
+
+<span class="tk-k">await</span> <span class="tk-f">expect</span>(badge).<span class="tk-f">toHaveText</span>(<span class="tk-s">'1'</span>);</code></pre>
                     </div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <section id="demo" class="demo-section">
-        <div class="container">
-            <h2 class="section-title">See It in <span class="gradient-text">Action</span></h2>
-            <p class="section-subtitle">Watch healwright detect and fix broken locators in real time.</p>
-            <div class="video-wrapper">
-                <iframe src="https://www.youtube.com/embed/qyHSG0K99i4"
-                    title="Healwright Demo — AI Self-Healing in Action" frameborder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowfullscreen loading="lazy">
-                </iframe>
-            </div>
-        </div>
-    </section>
-
-
-
-    <footer>
-        <div class="container footer-content">
-            <div class="footer-left">
-                <div class="logo">
-                    <img src="./owl.png" alt="Healwright Icon" class="nav-logo-img">
-                    <span class="brand-text">Healwright</span>
+        <!-- ============ Providers ============ -->
+        <section class="section" id="providers">
+            <div class="wrap">
+                <div class="section-head">
+                    <h2>Cloud models, or one on your own machine</h2>
+                    <p>Pick a provider with one environment variable. With Ollama the model runs locally, so page
+                        content never leaves your computer.</p>
                 </div>
-                <p>Built for the modern web automation tests.</p>
+
+                <div class="prov">
+                    <fieldset class="prov-list" id="prov">
+                        <legend class="sr-only">Provider</legend>
+                        <label class="prov-opt">
+                            <input type="radio" name="provider" value="openai" checked>
+                            <span class="prov-card">
+                                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path
+                                        d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z" />
+                                </svg>
+                                <span class="prov-name">OpenAI</span>
+                                <span class="prov-meta">The default</span>
+                            </span>
+                        </label>
+                        <label class="prov-opt">
+                            <input type="radio" name="provider" value="anthropic">
+                            <span class="prov-card">
+                                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path
+                                        d="M17.3041 3.541h-3.6718l6.696 16.918H24Zm-10.6082 0L0 20.459h3.7442l1.3693-3.5527h7.0052l1.3693 3.5528h3.7442L10.5363 3.5409Zm-.3712 10.2232 2.2914-5.9456 2.2914 5.9456Z" />
+                                </svg>
+                                <span class="prov-name">Anthropic</span>
+                                <span class="prov-meta">Claude models</span>
+                            </span>
+                        </label>
+                        <label class="prov-opt">
+                            <input type="radio" name="provider" value="google">
+                            <span class="prov-card">
+                                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path
+                                        d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81" />
+                                </svg>
+                                <span class="prov-name">Gemini</span>
+                                <span class="prov-meta">Google models</span>
+                            </span>
+                        </label>
+                        <label class="prov-opt">
+                            <input type="radio" name="provider" value="local">
+                            <span class="prov-card">
+                                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path
+                                        d="M16.361 10.26a.894.894 0 0 0-.558.47l-.072.148.001.207c0 .193.004.217.059.353.076.193.152.312.291.448.24.238.51.3.872.205a.86.86 0 0 0 .517-.436.752.752 0 0 0 .08-.498c-.064-.453-.33-.782-.724-.897a1.06 1.06 0 0 0-.466 0zm-9.203.005c-.305.096-.533.32-.65.639a1.187 1.187 0 0 0-.06.52c.057.309.31.59.598.667.362.095.632.033.872-.205.14-.136.215-.255.291-.448.055-.136.059-.16.059-.353l.001-.207-.072-.148a.894.894 0 0 0-.565-.472 1.02 1.02 0 0 0-.474.007Zm4.184 2c-.131.071-.223.25-.195.383.031.143.157.288.353.407.105.063.112.072.117.136.004.038-.01.146-.029.243-.02.094-.036.194-.036.222.002.074.07.195.143.253.064.052.076.054.255.059.164.005.198.001.264-.03.169-.082.212-.234.15-.525-.052-.243-.042-.28.087-.355.137-.08.281-.219.324-.314a.365.365 0 0 0-.175-.48.394.394 0 0 0-.181-.033c-.126 0-.207.03-.355.124l-.085.053-.053-.032c-.219-.13-.259-.145-.391-.143a.396.396 0 0 0-.193.032zm.39-2.195c-.373.036-.475.05-.654.086-.291.06-.68.195-.951.328-.94.46-1.589 1.226-1.787 2.114-.04.176-.045.234-.045.53 0 .294.005.357.043.524.264 1.16 1.332 2.017 2.714 2.173.3.033 1.596.033 1.896 0 1.11-.125 2.064-.727 2.493-1.571.114-.226.169-.372.22-.602.039-.167.044-.23.044-.523 0-.297-.005-.355-.045-.531-.288-1.29-1.539-2.304-3.072-2.497a6.873 6.873 0 0 0-.855-.031zm.645.937a3.283 3.283 0 0 1 1.44.514c.223.148.537.458.671.662.166.251.26.508.303.82.02.143.01.251-.043.482-.08.345-.332.705-.672.957a3.115 3.115 0 0 1-.689.348c-.382.122-.632.144-1.525.138-.582-.006-.686-.01-.853-.042-.57-.107-1.022-.334-1.35-.68-.264-.28-.385-.535-.45-.946-.03-.192.025-.509.137-.776.136-.326.488-.73.836-.963.403-.269.934-.46 1.422-.512.187-.02.586-.02.773-.002zm-5.503-11a1.653 1.653 0 0 0-.683.298C5.617.74 5.173 1.666 4.985 2.819c-.07.436-.119 1.04-.119 1.503 0 .544.064 1.24.155 1.721.02.107.031.202.023.208a8.12 8.12 0 0 1-.187.152 5.324 5.324 0 0 0-.949 1.02 5.49 5.49 0 0 0-.94 2.339 6.625 6.625 0 0 0-.023 1.357c.091.78.325 1.438.727 2.04l.13.195-.037.064c-.269.452-.498 1.105-.605 1.732-.084.496-.095.629-.095 1.294 0 .67.009.803.088 1.266.095.555.288 1.143.503 1.534.071.128.243.393.264.407.007.003-.014.067-.046.141a7.405 7.405 0 0 0-.548 1.873c-.062.417-.071.552-.071.991 0 .56.031.832.148 1.279L3.42 24h1.478l-.05-.091c-.297-.552-.325-1.575-.068-2.597.117-.472.25-.819.498-1.296l.148-.29v-.177c0-.165-.003-.184-.057-.293a.915.915 0 0 0-.194-.25 1.74 1.74 0 0 1-.385-.543c-.424-.92-.506-2.286-.208-3.451.124-.486.329-.918.544-1.154a.787.787 0 0 0 .223-.531c0-.195-.07-.355-.224-.522a3.136 3.136 0 0 1-.817-1.729c-.14-.96.114-2.005.69-2.834.563-.814 1.353-1.336 2.237-1.475.199-.033.57-.028.776.01.226.04.367.028.512-.041.179-.085.268-.19.374-.431.093-.215.165-.333.36-.576.234-.29.46-.489.822-.729.413-.27.884-.467 1.352-.561.17-.035.25-.04.569-.04.319 0 .398.005.569.04a4.07 4.07 0 0 1 1.914.997c.117.109.398.457.488.602.034.057.095.177.132.267.105.241.195.346.374.43.14.068.286.082.503.045.343-.058.607-.053.943.016 1.144.23 2.14 1.173 2.581 2.437.385 1.108.276 2.267-.296 3.153-.097.15-.193.27-.333.419-.301.322-.301.722-.001 1.053.493.539.801 1.866.708 3.036-.062.772-.26 1.463-.533 1.854a2.096 2.096 0 0 1-.224.258.916.916 0 0 0-.194.25c-.054.109-.057.128-.057.293v.178l.148.29c.248.476.38.823.498 1.295.253 1.008.231 2.01-.059 2.581a.845.845 0 0 0-.044.098c0 .006.329.009.732.009h.73l.02-.074.036-.134c.019-.076.057-.3.088-.516.029-.217.029-1.016 0-1.258-.11-.875-.295-1.57-.597-2.226-.032-.074-.053-.138-.046-.141.008-.005.057-.074.108-.152.376-.569.607-1.284.724-2.228.031-.26.031-1.378 0-1.628-.083-.645-.182-1.082-.348-1.525a6.083 6.083 0 0 0-.329-.7l-.038-.064.131-.194c.402-.604.636-1.262.727-2.04a6.625 6.625 0 0 0-.024-1.358 5.512 5.512 0 0 0-.939-2.339 5.325 5.325 0 0 0-.95-1.02 8.097 8.097 0 0 1-.186-.152.692.692 0 0 1 .023-.208c.208-1.087.201-2.443-.017-3.503-.19-.924-.535-1.658-.98-2.082-.354-.338-.716-.482-1.15-.455-.996.059-1.8 1.205-2.116 3.01a6.805 6.805 0 0 0-.097.726c0 .036-.007.066-.015.066a.96.96 0 0 1-.149-.078A4.857 4.857 0 0 0 12 3.03c-.832 0-1.687.243-2.456.698a.958.958 0 0 1-.148.078c-.008 0-.015-.03-.015-.066a6.71 6.71 0 0 0-.097-.725C8.997 1.392 8.337.319 7.46.048a2.096 2.096 0 0 0-.585-.041Zm.293 1.402c.248.197.523.759.682 1.388.03.113.06.244.069.292.007.047.026.152.041.233.067.365.098.76.102 1.24l.002.475-.12.175-.118.178h-.278c-.324 0-.646.041-.954.124l-.238.06c-.033.007-.038-.003-.057-.144a8.438 8.438 0 0 1 .016-2.323c.124-.788.413-1.501.696-1.711.067-.05.079-.049.157.013zm9.825-.012c.17.126.358.46.498.888.28.854.36 2.028.212 3.145-.019.14-.024.151-.057.144l-.238-.06a3.693 3.693 0 0 0-.954-.124h-.278l-.119-.178-.119-.175.002-.474c.004-.669.066-1.19.214-1.772.157-.623.434-1.185.68-1.382.078-.062.09-.063.159-.012z" />
+                                </svg>
+                                <span class="prov-name">Ollama</span>
+                                <span class="prov-meta">Runs locally</span>
+                            </span>
+                        </label>
+                        <label class="prov-opt">
+                            <input type="radio" name="provider" value="custom">
+                            <span class="prov-card">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M8 6 2 12l6 6M16 6l6 6-6 6M14 4l-4 16" />
+                                </svg>
+                                <span class="prov-name">Your own</span>
+                                <span class="prov-meta">Any model in Node</span>
+                            </span>
+                        </label>
+                    </fieldset>
+
+                    <pre class="prov-env" aria-live="polite"><code id="prov-env"></code></pre>
+
+                    <p class="prov-foot">Behind a gateway? <code>AI_BASE_URL</code> points a built-in provider at
+                        Azure, OpenRouter, vLLM or LiteLLM.</p>
+                </div>
             </div>
-            <div class="footer-links">
-                <a href="get-started.html">Documentation</a>
+        </section>
+
+        <!-- ============ Demo video ============ -->
+        <section class="section" id="demo">
+            <div class="wrap">
+                <div class="section-head">
+                    <h2>Watch a real run</h2>
+                    <p>Broken locators found and fixed in a live Playwright session.</p>
+                </div>
+                <div class="video">
+                    <button class="video-play" id="video-play" type="button" data-yt="qyHSG0K99i4"
+                        aria-label="Play the demo video. This loads YouTube.">
+                        <img src="https://i.ytimg.com/vi/qyHSG0K99i4/maxresdefault.jpg" alt="" loading="lazy"
+                            onerror="this.onerror=null;this.src='https://i.ytimg.com/vi/qyHSG0K99i4/hqdefault.jpg'">
+                        <span class="video-badge">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+                                <path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" />
+                            </svg>
+                            Play demo
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ CTA ============ -->
+        <section class="cta">
+            <div class="wrap cta-inner">
+                <h2>Start with the test that breaks most often.</h2>
+                <div class="hero-actions">
+                    <button class="install" type="button" data-copy="npm install healwright">
+                        <span class="install-prompt" aria-hidden="true">$</span>
+                        <code>npm install healwright</code>
+                        <span class="install-state" aria-live="polite">Copy</span>
+                    </button>
+                    <a class="btn btn-ghost btn-lg" href="get-started.html">Read the guide</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="foot">
+        <div class="wrap foot-inner">
+            <a class="brand" href="./">
+                <img src="owl.png" alt="" width="22" height="26">
+                <span>Healwright</span>
+            </a>
+            <nav class="foot-links" aria-label="Footer">
+                <a href="get-started.html">Guide</a>
                 <a href="https://github.com/amrsa1/healwright" target="_blank" rel="noopener noreferrer">GitHub</a>
-                <a href="https://www.npmjs.com/package/healwright" target="_blank" rel="noopener noreferrer">NPM</a>
+                <a href="https://www.npmjs.com/package/healwright" target="_blank" rel="noopener noreferrer">npm</a>
+                <a href="https://github.com/amrsa1/healwright/blob/main/CHANGELOG.md" target="_blank"
+                    rel="noopener noreferrer">Changelog</a>
                 <a href="https://github.com/amrsa1/healwright/blob/main/LICENSE" target="_blank"
-                    rel="noopener noreferrer">License</a>
+                    rel="noopener noreferrer">MIT license</a>
                 <a href="https://amr-salem.com" target="_blank" rel="noopener noreferrer">Contact</a>
-            </div>
-        </div>
-        <div class="container copyright">
-            &copy; 2026 Healwright. All rights reserved.
+            </nav>
+            <p class="foot-copy">&copy; 2026 Healwright</p>
         </div>
     </footer>
-
-    <script>
-        lucide.createIcons();
-
-        // Intersection observer for fade-in animations
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                }
-            });
-        }, { threshold: 0.15 });
-
-        document.querySelectorAll('.feature-card, .promo-bar, .provider-card').forEach((el) => {
-            el.classList.add('fade-in-section');
-            observer.observe(el);
-        });
-
-        // Re-trigger pipeline step animations when scrolled into view
-        const pipelineObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.querySelectorAll('.pipe-step').forEach(step => {
-                        step.style.animation = 'none';
-                        void step.offsetHeight;
-                        step.style.animation = '';
-                    });
-                }
-            });
-        }, { threshold: 0.2 });
-
-        const pipeline = document.getElementById('pipeline');
-        if (pipeline) pipelineObserver.observe(pipeline);
-    </script>
 </body>
 
 </html>

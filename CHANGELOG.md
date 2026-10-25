@@ -3,6 +3,26 @@
 All notable changes to healwright are documented here.
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `mode: 'warn'` no longer applies cached heals. A committed `healed_locators.json` made report-only
+  runs click the cached element and pass; the cached heal is now reported like any other.
+- `getHealSummary()` works from `globalTeardown`. The tally only lived in each worker's memory, so
+  the runner process always read zero. Outcomes are now also written to
+  `.self-heal/heal_summary.jsonl`, and only the current run is counted.
+- `heal.getLocator()` in `mode: 'warn'` writes its report to `heal_events.jsonl`, like the actions do.
+
+### Changed
+
+- Dependencies updated to their latest versions, including `@anthropic-ai/sdk` 1.x, `vitest` 5 and `tsup` 9.
+
+### Docs
+
+- New website and getting-started guide, a rewritten README with an animated demo, and a new social
+  preview image.
+
 ## [1.8.0] - 2026-08-19
 
 Bug fixes, a confidence policy so healing can't quietly hide a regression, and support for custom endpoints.

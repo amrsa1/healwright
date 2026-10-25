@@ -1,381 +1,445 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Get Started | Healwright</title>
-    <meta
-      name="description"
-      content="Get started with Healwright - AI-powered self-healing locators for Playwright."
-    />
-    <link rel="stylesheet" href="style.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get started | Healwright</title>
+    <meta name="description"
+        content="Install healwright, pick an AI provider, wrap the Playwright page fixture, and write your first self-healing test.">
+    <meta name="theme-color" content="#0A1230">
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://amrsa1.github.io/healwright/get-started.html">
+    <meta property="og:title" content="Get started with Healwright">
+    <meta property="og:description"
+        content="From npm install to a Playwright test that heals its own broken selectors.">
+    <meta property="og:image" content="https://amrsa1.github.io/healwright/social.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="https://amrsa1.github.io/healwright/social.png">
+
+    <link rel="icon" href="owl.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
-      rel="stylesheet"
-    />
-    <script src="https://unpkg.com/lucide@latest"></script>
-  </head>
+        href="https://fonts.googleapis.com/css2?family=Geologica:slnt,wght,CRSV,SHRP@-12..0,100..900,0..1,0..100&family=Martian+Mono:wdth,wght@75..112.5,100..800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="site.css">
+    <script src="site.js" defer></script>
+</head>
 
-  <body>
-    <div class="bg-grid"></div>
-    <div class="bg-glow"></div>
+<body>
+    <a class="skip" href="#main">Skip to content</a>
 
-    <nav class="navbar">
-      <div class="container nav-content">
-        <a href="index.html" class="logo" style="text-decoration: none">
-          <img src="./owl.png" alt="Healwright Icon" class="nav-logo-img" />
-          <span class="brand-text">Healwright</span>
-        </a>
-        <div class="nav-links">
-          <a href="index.html#features">Features</a>
-          <a href="index.html#how-it-works">How it Works</a>
-          <a
-            href="https://github.com/amrsa1/healwright"
-            class="btn btn-secondary"
-            ><i data-lucide="github"></i> GitHub</a
-          >
-          <a href="get-started.html" class="btn btn-primary">Get Started</a>
+    <header class="nav">
+        <div class="wrap nav-inner">
+            <a class="brand" href="./">
+                <img src="owl.png" alt="" width="26" height="31">
+                <span>Healwright</span>
+            </a>
+            <nav class="nav-links" aria-label="Site">
+                <a href="./#how">How it heals</a>
+                <a href="./#guardrails">Guardrails</a>
+                <a href="./#api">API</a>
+                <a href="./#providers">Providers</a>
+            </nav>
+            <div class="nav-actions">
+                <a class="btn btn-ghost" href="https://github.com/amrsa1/healwright">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+                        <path
+                            d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.69 1.25 3.35.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a10.9 10.9 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.69 5.39-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z" />
+                    </svg>
+                    <span>GitHub</span>
+                </a>
+                <a class="btn btn-solid" href="get-started.html" aria-current="page">Get started</a>
+            </div>
         </div>
-      </div>
-    </nav>
+    </header>
 
-    <main class="main-content">
-      <section class="get-started">
-        <img src="./owl2.png" class="get-started-bg-logo" alt="" />
-        <div class="container">
-          <h2 class="section-title">
-            Get <span class="gradient-text">Started</span>
-          </h2>
-          <div class="code-steps">
-            <!-- Step 1: Installation -->
-            <div class="step-block" style="--s: 0">
-              <h4>
-                <span class="step-num step-num--blue">01</span> Installation
-              </h4>
-              <div class="command-block">
-                <span class="prompt">$</span> npm install healwright
-                <button
-                  class="copy-btn"
-                  onclick="copyText('npm install healwright', this)"
-                >
-                  <i data-lucide="copy"></i>
-                </button>
-              </div>
+    <main id="main">
+        <section class="guide-hero">
+            <div class="wrap">
+                <h1 class="title title-guide" id="title" data-crack="hover">
+                    <span class="title-real">Get started</span>
+                    <span class="title-half title-top" aria-hidden="true">Get started</span>
+                    <span class="title-half title-bottom" aria-hidden="true">Get started</span>
+                    <svg class="title-seam" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                        <polyline points="0,37 9,46 20,40 31,51 43,45 55,57 66,52 78,63 89,57 100,64" />
+                    </svg>
+                </h1>
+                <p class="lede">From <code>npm install</code> to a test that heals its own broken selectors. You need
+                    Playwright 1.62 or newer, and either an API key for a cloud model or Ollama running on your
+                    machine.</p>
             </div>
+        </section>
 
-            <!-- Step 2: Configuration -->
-            <div class="step-block" style="--s: 1">
-              <h4>
-                <span class="step-num step-num--purple">02</span> Configuration
-              </h4>
-              <p>
-                Set your API key and choose your provider — OpenAI, Anthropic,
-                Google, or use a local LLM via Ollama.
-              </p>
-              <div class="code-block-wrap">
-                <div class="code-block-header">
-                  <span class="dot red"></span>
-                  <span class="dot yellow"></span>
-                  <span class="dot green"></span>
-                  <span class="file-label">.env</span>
-                </div>
-                <button class="code-copy-btn" onclick="copyBlock(this)">
-                  <i data-lucide="clipboard"></i> Copy
-                </button>
-                <div class="code-preview">
-                  <pre><code class="language-bash"><span class="comment"># OpenAI (default, or AI_PROVIDER="gpt")</span>
-export AI_API_KEY="your-openai-key"
-export AI_MODEL="gpt-5-nano"
-export SELF_HEAL=1
+        <div class="wrap guide">
+            <nav class="toc" aria-label="On this page">
+                <ol class="toc-list" id="toc">
+                    <li><a href="#install"><span class="toc-n">1</span>Install</a></li>
+                    <li><a href="#provider"><span class="toc-n">2</span>Pick a provider</a></li>
+                    <li><a href="#fixture"><span class="toc-n">3</span>Add the fixture</a></li>
+                    <li><a href="#first-test"><span class="toc-n">4</span>Write a test</a></li>
+                    <li><a href="#run"><span class="toc-n">5</span>Run it</a></li>
+                    <li><a href="#honest"><span class="toc-n">6</span>Keep it honest</a></li>
+                    <li><a href="#files"><span class="toc-n">7</span>Cache and logs</a></li>
+                    <li><a href="#reference"><span class="toc-n toc-n-ref" aria-hidden="true"></span>Reference</a>
+                    </li>
+                </ol>
+            </nav>
 
-<span class="comment"># Anthropic (AI_PROVIDER="anthropic" or "claude")</span>
-export AI_PROVIDER="anthropic"
-export AI_API_KEY="your-anthropic-key"
-export AI_MODEL="claude-sonnet-4-20250514"
-export SELF_HEAL=1
+            <div class="guide-body" id="guide-body">
+                <!-- 1 -->
+                <section class="gstep" id="install">
+                    <h2><span class="gstep-n" aria-hidden="true">1</span>Install</h2>
+                    <p>Add healwright to the project that holds your Playwright tests.</p>
+                    <button class="install" type="button" data-copy="npm install healwright">
+                        <span class="install-prompt" aria-hidden="true">$</span>
+                        <code>npm install healwright</code>
+                        <span class="install-state" aria-live="polite">Copy</span>
+                    </button>
+                </section>
 
-<span class="comment"># Google (AI_PROVIDER="google" or "gemini")</span>
-export AI_PROVIDER="google"
-export AI_API_KEY="your-google-key"
-export AI_MODEL="gemini-2.5-flash"
-export SELF_HEAL=1
+                <!-- 2 -->
+                <section class="gstep" id="provider">
+                    <h2><span class="gstep-n" aria-hidden="true">2</span>Pick a provider</h2>
+                    <p>Healing stays off until <code>SELF_HEAL=1</code>, so your suite runs exactly as before until you
+                        turn it on. healwright reads environment variables: set them in CI, or load a
+                        <code>.env</code> file with <code>import 'dotenv/config'</code> at the top of
+                        <code>playwright.config.ts</code>.</p>
 
-<span class="comment"># Local LLM via Ollama (AI_PROVIDER="local" or "ollama") — no API key needed!</span>
-export AI_PROVIDER="local"
-export AI_MODEL="gemma3:4b"
-export SELF_HEAL=1
-<span class="comment"># Recommended: gemma3:4b or mistral (best accuracy for local models)</span>
-<span class="comment"># export AI_MODEL="mistral"       # fast and reliable</span>
-<span class="comment"># export AI_MODEL="llama3.2:1b"   # ultra-light for CI</span></code></pre>
-                </div>
-              </div>
-            </div>
+                    <figure class="codeblock">
+                        <div class="codeblock-bar">
+                            <div class="tabs tabs-bar" role="tablist" aria-label="Provider">
+                                <button class="tab" role="tab" id="t-openai" aria-controls="p-openai"
+                                    aria-selected="true" type="button">OpenAI</button>
+                                <button class="tab" role="tab" id="t-anthropic" aria-controls="p-anthropic"
+                                    aria-selected="false" tabindex="-1" type="button">Anthropic</button>
+                                <button class="tab" role="tab" id="t-google" aria-controls="p-google"
+                                    aria-selected="false" tabindex="-1" type="button">Gemini</button>
+                                <button class="tab" role="tab" id="t-local" aria-controls="p-local"
+                                    aria-selected="false" tabindex="-1" type="button">Ollama</button>
+                            </div>
+                            <button class="codeblock-copy" type="button">Copy</button>
+                        </div>
+                        <div role="tabpanel" id="p-openai" aria-labelledby="t-openai">
+<pre class="codeblock-pre"><code><span class="e-k">SELF_HEAL</span>=<span class="e-v">1</span>
+<span class="e-k">AI_PROVIDER</span>=<span class="e-v">openai</span>
+<span class="e-k">AI_API_KEY</span>=<span class="e-v">sk-…</span>
+<span class="tk-c"># AI_MODEL=…   optional, overrides the default model</span></code></pre>
+                        </div>
+                        <div role="tabpanel" id="p-anthropic" aria-labelledby="t-anthropic" hidden>
+<pre class="codeblock-pre"><code><span class="e-k">SELF_HEAL</span>=<span class="e-v">1</span>
+<span class="e-k">AI_PROVIDER</span>=<span class="e-v">anthropic</span>
+<span class="e-k">AI_API_KEY</span>=<span class="e-v">sk-ant-…</span>
+<span class="tk-c"># AI_MODEL=…   optional, overrides the default model</span></code></pre>
+                        </div>
+                        <div role="tabpanel" id="p-google" aria-labelledby="t-google" hidden>
+<pre class="codeblock-pre"><code><span class="e-k">SELF_HEAL</span>=<span class="e-v">1</span>
+<span class="e-k">AI_PROVIDER</span>=<span class="e-v">google</span>
+<span class="e-k">AI_API_KEY</span>=<span class="e-v">…</span>
+<span class="tk-c"># AI_MODEL=…   optional, overrides the default model</span></code></pre>
+                        </div>
+                        <div role="tabpanel" id="p-local" aria-labelledby="t-local" hidden>
+<pre class="codeblock-pre"><code><span class="e-k">SELF_HEAL</span>=<span class="e-v">1</span>
+<span class="e-k">AI_PROVIDER</span>=<span class="e-v">local</span>
+<span class="tk-c"># No API key. Page content never leaves your machine.</span>
+<span class="tk-c"># OLLAMA_HOST=http://127.0.0.1:11434   the default</span>
+<span class="tk-c"># AI_MODEL=gemma3:4b                   the default; mistral also works well</span></code></pre>
+                        </div>
+                    </figure>
+                    <p class="note">Behind a gateway? <code>AI_BASE_URL</code> points any built-in provider at Azure,
+                        OpenRouter, vLLM or LiteLLM. For a model healwright has no client for, pass your own with the
+                        <code>aiProvider</code> option.</p>
+                </section>
 
-            <!-- Step 3: Fixture -->
-            <div class="step-block" style="--s: 2">
-              <h4>
-                <span class="step-num step-num--cyan">03</span> Setup Fixture
-              </h4>
-              <p>
-                Create a fixture to wrap your Playwright page with self-healing
-                powers.
-              </p>
-              <div class="code-block-wrap">
-                <div class="code-block-header">
-                  <span class="dot red"></span>
-                  <span class="dot yellow"></span>
-                  <span class="dot green"></span>
-                  <span class="file-label">fixtures.ts</span>
-                </div>
-                <button class="code-copy-btn" onclick="copyBlock(this)">
-                  <i data-lucide="clipboard"></i> Copy
-                </button>
-                <div class="code-preview">
-                  <pre><code class="language-typescript"><span class="keyword">import</span> { test as base } from <span class="string">'@playwright/test'</span>;
-<span class="keyword">import</span> { createHealingFixture, HealPage } from <span class="string">'healwright'</span>;
+                <!-- 3 -->
+                <section class="gstep" id="fixture">
+                    <h2><span class="gstep-n" aria-hidden="true">3</span>Add the fixture</h2>
+                    <p>Wrap the <code>page</code> fixture once. Every test that imports <code>test</code> from this
+                        file gets <code>page.heal</code>; everything else on <code>page</code> works as usual.</p>
+                    <figure class="codeblock">
+                        <div class="codeblock-bar">
+                            <span class="codeblock-file">fixtures.ts</span>
+                            <button class="codeblock-copy" type="button">Copy</button>
+                        </div>
+<pre class="codeblock-pre"><code><span class="tk-k">import</span> { test <span class="tk-k">as</span> base } <span class="tk-k">from</span> <span class="tk-s">'@playwright/test'</span>;
+<span class="tk-k">import</span> { createHealingFixture, HealPage } <span class="tk-k">from</span> <span class="tk-s">'healwright'</span>;
 
-<span class="keyword">export const</span> test = base.extend<{ page: HealPage }>(createHealingFixture());
-<span class="keyword">export</span> { expect } from <span class="string">'@playwright/test'</span>;</code></pre>
-                </div>
-              </div>
-            </div>
+<span class="tk-k">export const</span> test = base.<span class="tk-f">extend</span>&lt;{ page: HealPage }&gt;(<span class="tk-f">createHealingFixture</span>());
+<span class="tk-k">export</span> { expect } <span class="tk-k">from</span> <span class="tk-s">'@playwright/test'</span>;</code></pre>
+                    </figure>
+                </section>
 
-            <!-- Step 4: First Test -->
-            <div class="step-block" style="--s: 3">
-              <h4>
-                <span class="step-num step-num--green">04</span> Write Your
-                First Test
-              </h4>
-              <p>
-                Use the wrapped page in your tests. If a selector breaks, AI
-                fixes it automatically.
-              </p>
-              <div class="code-block-wrap">
-                <div class="code-block-header">
-                  <span class="dot red"></span>
-                  <span class="dot yellow"></span>
-                  <span class="dot green"></span>
-                  <span class="file-label">login.spec.ts</span>
-                </div>
-                <button class="code-copy-btn" onclick="copyBlock(this)">
-                  <i data-lucide="clipboard"></i> Copy
-                </button>
-                <div class="code-preview">
-                  <pre><code class="language-typescript"><span class="keyword">import</span> { test, expect } from <span class="string">'./fixtures'</span>;
+                <!-- 4 -->
+                <section class="gstep" id="first-test">
+                    <h2><span class="gstep-n" aria-hidden="true">4</span>Write a test</h2>
+                    <p>Each <code>page.heal</code> action takes a selector and a description. The selector runs first;
+                        the description is what the model looks for when the selector stops matching. Leave the
+                        selector empty and the description is enough.</p>
+                    <figure class="codeblock">
+                        <div class="codeblock-bar">
+                            <span class="codeblock-file">checkout.spec.ts</span>
+                            <button class="codeblock-copy" type="button">Copy</button>
+                        </div>
+<pre class="codeblock-pre"><code><span class="tk-k">import</span> { test, expect } <span class="tk-k">from</span> <span class="tk-s">'./fixtures'</span>;
 
-<span class="keyword">test</span>(<span class="string">'login flow'</span>, <span class="keyword">async</span> ({ page }) => {
-  <span class="keyword">await</span> page.goto(<span class="string">'https://example.com'</span>);
+<span class="tk-k">test</span>(<span class="tk-s">'customer can check out'</span>, <span class="tk-k">async</span> ({ page }) =&gt; {
+  <span class="tk-k">await</span> page.<span class="tk-f">goto</span>(<span class="tk-s">'https://shop.example/checkout'</span>);
 
-  <span class="comment">// If this selector breaks, AI will find the right element</span>
-  <span class="keyword">await</span> page.heal.<span class="function">click</span>(
-    page.locator(<span class="string">'[data-testid="submit-btn"]'</span>),
-    <span class="string">'Submit button on form'</span>
-  );
+  <span class="tk-c">// No selector: the description is enough</span>
+  <span class="tk-k">await</span> page.heal.<span class="tk-f">fill</span>(<span class="tk-s">''</span>, <span class="tk-s">'Email field'</span>, <span class="tk-s">'ada@example.com'</span>);
 
-  <span class="comment">// Or skip the selector entirely — AI-only mode</span>
-  <span class="keyword">await</span> page.heal.<span class="function">fill</span>(<span class="string">''</span>, <span class="string">'Email input field'</span>, <span class="string">'user@example.com'</span>);
+  <span class="tk-c">// The selector runs first; the description takes over if it breaks</span>
+  <span class="tk-k">await</span> page.heal.<span class="tk-f">click</span>(<span class="tk-s">'#buy-now'</span>, <span class="tk-s">'Place order button'</span>);
+
+  <span class="tk-k">await</span> <span class="tk-f">expect</span>(page.<span class="tk-f">getByText</span>(<span class="tk-s">'Order confirmed'</span>)).<span class="tk-f">toBeVisible</span>();
 });</code></pre>
-                </div>
-              </div>
-            </div>
+                    </figure>
+                    <p class="note">Describe elements the way you'd point them out to a colleague: "Place order
+                        button", not "button". The model has only your words and the page to go on.</p>
+                </section>
 
-            <!-- Step 5: Methods -->
-            <div class="step-block" style="--s: 4">
-              <h4>
-                <span class="step-num step-num--amber">05</span> Available
-                Methods
-              </h4>
-              <p>
-                All healing methods accept a locator (or empty string for
-                AI-only) and a description.
-              </p>
-              <div class="methods-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Method</th>
-                      <th>What it does</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><code>heal.locator(selector, desc)</code></td>
-                      <td>Chainable self-healing locator</td>
-                    </tr>
-                    <tr>
-                      <td><code>heal.click(loc, desc, {force?})</code></td>
-                      <td>Click (force: true for hidden elements)</td>
-                    </tr>
-                    <tr>
-                      <td><code>heal.fill(locator, desc, value)</code></td>
-                      <td>Fill an input field</td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <code>heal.selectOption(locator, desc, value)</code>
-                      </td>
-                      <td>Select from a dropdown</td>
-                    </tr>
-                    <tr>
-                      <td><code>heal.check(locator, desc)</code></td>
-                      <td>Check a checkbox</td>
-                    </tr>
-                    <tr>
-                      <td><code>heal.uncheck(locator, desc)</code></td>
-                      <td>Uncheck a checkbox</td>
-                    </tr>
-                    <tr>
-                      <td><code>heal.dblclick(locator, desc)</code></td>
-                      <td>Double-click an element</td>
-                    </tr>
-                    <tr>
-                      <td><code>heal.hover(locator, desc)</code></td>
-                      <td>Hover over an element</td>
-                    </tr>
-                    <tr>
-                      <td><code>heal.focus(locator, desc)</code></td>
-                      <td>Focus an element</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                <!-- 5 -->
+                <section class="gstep" id="run">
+                    <h2><span class="gstep-n" aria-hidden="true">5</span>Run it</h2>
+                    <p>While your selectors match, nothing changes and tests run at full speed. When one breaks, the
+                        heal shows up in the output. The next run reads the fix from the cache and doesn't call the
+                        model.</p>
+                    <figure class="codeblock codeblock-term">
+                        <div class="codeblock-bar">
+                            <span class="codeblock-file">Terminal</span>
+                        </div>
+<pre class="codeblock-pre"><code><span class="t-dim">$</span> <span class="t-hi">SELF_HEAL=1 npx playwright test</span>
 
-            <!-- Step 6: AI-Only Mode -->
-            <div class="step-block" style="--s: 5">
-              <h4>
-                <span class="step-num step-num--purple">06</span> AI-Only Mode
-              </h4>
-              <p>
-                Pass an empty string as the locator and let AI find the element
-                from your description alone.
-              </p>
-              <div class="code-block-wrap">
-                <div class="code-block-header">
-                  <span class="dot red"></span>
-                  <span class="dot yellow"></span>
-                  <span class="dot green"></span>
-                  <span class="file-label">example.spec.ts</span>
-                </div>
-                <button class="code-copy-btn" onclick="copyBlock(this)">
-                  <i data-lucide="clipboard"></i> Copy
-                </button>
-                <div class="code-preview">
-                  <pre><code class="language-typescript"><span class="keyword">await</span> page.heal.<span class="function">click</span>(<span class="string">''</span>, <span class="string">'Login button'</span>);
-<span class="keyword">await</span> page.heal.<span class="function">fill</span>(<span class="string">''</span>, <span class="string">'Search input'</span>, <span class="string">'my query'</span>);</code></pre>
-                </div>
-              </div>
-            </div>
+  <span class="t-badge">✦ healwright</span>
+<span class="t-dim">  │</span>
+<span class="t-dim">  ├─</span> <span class="t-warn">⚡︎</span> <span class="t-dim">CLICK</span> <span class="t-hi">Place order button</span>
+<span class="t-dim">  │  </span><span class="t-scan">⬡</span> <span class="t-dim">analyzing 14 elements... (filtered from 63)</span>
+<span class="t-dim">  │  ↳ received 412 chars</span>
+<span class="t-dim">  │</span>
+<span class="t-dim">  ├─</span> <span class="t-ok">✓</span> <span class="t-hi">Place order button</span>
+<span class="t-dim">  │  → getByRole("button", { name: "Place order" })</span>
+<span class="t-dim">  │  ↑ </span><span class="t-scan">1180</span><span class="t-dim"> input · </span><span class="t-scan">96</span><span class="t-dim"> output · </span><span class="t-scan">1276</span><span class="t-dim"> total tokens</span>
+<span class="t-dim">  └──────────────────────────────</span>
+<span class="t-ok">  ✓</span> checkout.spec.ts › customer can check out <span class="t-dim">(2.8s)</span></code></pre>
+                    </figure>
+                </section>
 
-            <!-- Step 7: Cache -->
-            <div class="step-block" style="--s: 6">
-              <h4>
-                <span class="step-num step-num--green">07</span> Cache
-                Configuration
-              </h4>
-              <p>
-                Healed selectors are cached in <code>.self-heal/</code>. Add it
-                to your <code>.gitignore</code>:
-              </p>
-              <div class="code-block-wrap">
-                <div class="code-block-header">
-                  <span class="dot red"></span>
-                  <span class="dot yellow"></span>
-                  <span class="dot green"></span>
-                  <span class="file-label">.gitignore</span>
-                </div>
-                <div class="code-preview">
-                  <pre><code class="language-bash"><span class="comment"># Healed selector cache</span>
-.self-heal/</code></pre>
-                </div>
-              </div>
+                <!-- 6 -->
+                <section class="gstep" id="honest">
+                    <h2><span class="gstep-n" aria-hidden="true">6</span>Keep it honest</h2>
+                    <p>A heal that lands on the wrong element still passes. These three settings decide how far the
+                        model is trusted and keep every heal visible. You can try them on the <a
+                            href="./#guardrails">home page</a>.</p>
+                    <dl class="knobs">
+                        <div class="knob">
+                            <dt><code>minConfidence</code></dt>
+                            <dd>Fail the action instead of guessing when the model's confidence is below this score
+                                (0 to 1).</dd>
+                        </div>
+                        <div class="knob">
+                            <dt><code>mode: 'warn'</code></dt>
+                            <dd>Report what would have healed and keep the original failure. Use it in CI to see how
+                                far your selectors have drifted.</dd>
+                        </div>
+                        <div class="knob">
+                            <dt><code>getHealSummary()</code></dt>
+                            <dd>Count every heal in the run, so global teardown can fail the build and list the
+                                selectors to fix.</dd>
+                        </div>
+                    </dl>
+                    <figure class="codeblock">
+                        <div class="codeblock-bar">
+                            <span class="codeblock-file">fixtures.ts</span>
+                            <button class="codeblock-copy" type="button">Copy</button>
+                        </div>
+<pre class="codeblock-pre"><code><span class="tk-k">export const</span> test = base.<span class="tk-f">extend</span>&lt;{ page: HealPage }&gt;(
+  <span class="tk-f">createHealingFixture</span>({
+    minConfidence: <span class="tk-s">0.8</span>,
+    mode: process.env.CI ? <span class="tk-s">'warn'</span> : <span class="tk-s">'heal'</span>,
+  })
+);</code></pre>
+                    </figure>
+                    <figure class="codeblock">
+                        <div class="codeblock-bar">
+                            <span class="codeblock-file">global-teardown.ts</span>
+                            <button class="codeblock-copy" type="button">Copy</button>
+                        </div>
+<pre class="codeblock-pre"><code><span class="tk-c">// playwright.config.ts: globalTeardown: './global-teardown.ts'</span>
+<span class="tk-k">import</span> { getHealSummary } <span class="tk-k">from</span> <span class="tk-s">'healwright'</span>;
+
+<span class="tk-k">export default function</span> () {
+  <span class="tk-k">const</span> { healed, entries } = <span class="tk-f">getHealSummary</span>();
+  <span class="tk-k">if</span> (healed === <span class="tk-s">0</span>) <span class="tk-k">return</span>;
+
+  console.<span class="tk-f">error</span>(<span class="tk-s">`${healed} locator(s) needed healing. Update these selectors:`</span>);
+  <span class="tk-k">for</span> (<span class="tk-k">const</span> e <span class="tk-k">of</span> entries.<span class="tk-f">filter</span>((e) =&gt; e.outcome === <span class="tk-s">'healed'</span>)) {
+    console.<span class="tk-f">error</span>(<span class="tk-s">`  ${e.action} "${e.contextName}"`</span>);
+  }
+  process.exitCode = <span class="tk-s">1</span>;
+}</code></pre>
+                    </figure>
+                    <p class="note">Running Playwright in UI or watch mode? Call <code>resetHealSummary()</code> from
+                        <code>globalSetup</code> so each run starts at zero.</p>
+                </section>
+
+                <!-- 7 -->
+                <section class="gstep" id="files">
+                    <h2><span class="gstep-n" aria-hidden="true">7</span>Cache and logs</h2>
+                    <p>healwright keeps three files in <code>.self-heal/</code>.</p>
+                    <div class="table-scroll">
+                        <table class="ref-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">File</th>
+                                    <th scope="col">What's in it</th>
+                                    <th scope="col">In git?</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>healed_locators.json</code></td>
+                                    <td>Every heal that worked, by action, page path and description.</td>
+                                    <td>Commit it to share heals with your team and CI.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>heal_events.jsonl</code></td>
+                                    <td>One line per heal attempt, with the model's reason, confidence and token
+                                        count.</td>
+                                    <td>Ignore</td>
+                                </tr>
+                                <tr>
+                                    <td><code>heal_summary.jsonl</code></td>
+                                    <td>The outcomes <code>getHealSummary()</code> reads at the end of a run.</td>
+                                    <td>Ignore</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <figure class="codeblock">
+                        <div class="codeblock-bar">
+                            <span class="codeblock-file">.gitignore</span>
+                            <button class="codeblock-copy" type="button">Copy</button>
+                        </div>
+<pre class="codeblock-pre"><code>.self-heal/heal_events.jsonl
+.self-heal/heal_summary.jsonl
+.self-heal/*.lock
+.self-heal/*.tmp
+<span class="tk-c"># Or keep heals local to each machine instead:</span>
+<span class="tk-c"># .self-heal/</span></code></pre>
+                    </figure>
+                </section>
+
+                <!-- Reference -->
+                <section class="gstep gstep-ref" id="reference">
+                    <h2>Reference</h2>
+
+                    <h3>Methods on <code>page.heal</code></h3>
+                    <p>Every action takes a selector or Locator (or <code>''</code> for description only) and a
+                        description.</p>
+                    <div class="table-scroll">
+                        <table class="ref-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Method</th>
+                                    <th scope="col">What it does</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><code>click(target, desc, { force? })</code></td><td>Click. <code>force: true</code> clicks controls that only appear on hover.</td></tr>
+                                <tr><td><code>dblclick(target, desc)</code></td><td>Double-click.</td></tr>
+                                <tr><td><code>fill(target, desc, value)</code></td><td>Type into an input or textarea.</td></tr>
+                                <tr><td><code>selectOption(target, desc, value)</code></td><td>Choose an option in a dropdown.</td></tr>
+                                <tr><td><code>check(target, desc)</code></td><td>Check a checkbox or radio.</td></tr>
+                                <tr><td><code>uncheck(target, desc)</code></td><td>Uncheck a checkbox.</td></tr>
+                                <tr><td><code>hover(target, desc)</code></td><td>Hover over an element.</td></tr>
+                                <tr><td><code>focus(target, desc)</code></td><td>Focus an element.</td></tr>
+                                <tr><td><code>locator(selector, desc)</code></td><td>A chainable locator with the same actions: <code>.locator('.save', 'Save button').click()</code>.</td></tr>
+                                <tr><td><code>getLocator(selector, desc)</code></td><td>Returns a real Playwright Locator, for <code>expect()</code>, <code>.nth()</code>, <code>.filter()</code> and the rest.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3>Fixture options</h3>
+                    <p>Pass these to <code>createHealingFixture()</code> or <code>withHealing(page, options)</code>.
+                    </p>
+                    <div class="table-scroll">
+                        <table class="ref-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Option</th>
+                                    <th scope="col">Default</th>
+                                    <th scope="col">What it does</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><code>enabled</code></td><td><code>SELF_HEAL=1</code></td><td>Turns healing on.</td></tr>
+                                <tr><td><code>mode</code></td><td><code>'heal'</code></td><td><code>'heal'</code>, <code>'warn'</code> (report only) or <code>'off'</code>.</td></tr>
+                                <tr><td><code>provider</code></td><td><code>'openai'</code></td><td><code>openai</code>, <code>anthropic</code>, <code>google</code> or <code>local</code>.</td></tr>
+                                <tr><td><code>model</code></td><td>Provider default</td><td>Overrides the model.</td></tr>
+                                <tr><td><code>apiKey</code></td><td><code>AI_API_KEY</code></td><td>The provider's API key.</td></tr>
+                                <tr><td><code>baseURL</code></td><td><code>AI_BASE_URL</code></td><td>Sends requests to another endpoint, such as a gateway.</td></tr>
+                                <tr><td><code>aiProvider</code></td><td>None</td><td>Your own provider, used instead of the built-in clients.</td></tr>
+                                <tr><td><code>minConfidence</code></td><td><code>0</code></td><td>Rejects heals scored below this (0 to 1). 0 accepts any.</td></tr>
+                                <tr><td><code>quickTimeout</code></td><td><code>1000</code></td><td>Milliseconds your own selector gets before healing starts.</td></tr>
+                                <tr><td><code>timeout</code></td><td><code>5000</code></td><td>Milliseconds for the healed locator and the action.</td></tr>
+                                <tr><td><code>maxCandidates</code></td><td><code>40</code></td><td>How many ranked elements are sent to the model.</td></tr>
+                                <tr><td><code>maxAiTries</code></td><td><code>4</code></td><td>How many suggested strategies are checked before giving up.</td></tr>
+                                <tr><td><code>cacheFile</code></td><td><code>.self-heal/healed_locators.json</code></td><td>Where heals are cached.</td></tr>
+                                <tr><td><code>reportFile</code></td><td><code>.self-heal/heal_events.jsonl</code></td><td>Where heal attempts are logged.</td></tr>
+                                <tr><td><code>logLevel</code></td><td><code>'info'</code></td><td><code>'info'</code>, <code>'error'</code> or <code>'silent'</code>.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3>Environment variables</h3>
+                    <div class="table-scroll">
+                        <table class="ref-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Variable</th>
+                                    <th scope="col">What it does</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><code>SELF_HEAL</code></td><td>Set to <code>1</code> to turn healing on.</td></tr>
+                                <tr><td><code>AI_PROVIDER</code></td><td><code>openai</code>/<code>gpt</code>, <code>anthropic</code>/<code>claude</code>, <code>google</code>/<code>gemini</code>, or <code>local</code>/<code>ollama</code>.</td></tr>
+                                <tr><td><code>AI_API_KEY</code></td><td>The provider's API key. Not needed for Ollama.</td></tr>
+                                <tr><td><code>AI_MODEL</code></td><td>Overrides the provider's default model.</td></tr>
+                                <tr><td><code>AI_BASE_URL</code></td><td>Sends requests to another endpoint.</td></tr>
+                                <tr><td><code>OLLAMA_HOST</code></td><td>Your Ollama server. Defaults to <code>http://127.0.0.1:11434</code>.</td></tr>
+                                <tr><td><code>HEALWRIGHT_MODE</code></td><td><code>heal</code>, <code>warn</code> or <code>off</code>.</td></tr>
+                                <tr><td><code>HEALWRIGHT_MIN_CONFIDENCE</code></td><td>Same as <code>minConfidence</code>.</td></tr>
+                                <tr><td><code>HEALWRIGHT_LOG</code></td><td><code>info</code>, <code>error</code> or <code>silent</code>.</td></tr>
+                                <tr><td><code>HEALWRIGHT_SUMMARY_FILE</code></td><td>Moves the summary file from <code>.self-heal/heal_summary.jsonl</code>.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
             </div>
-          </div>
         </div>
-      </section>
     </main>
 
-    <footer>
-      <div class="container footer-content">
-        <div class="footer-left">
-          <div class="logo">
-            <img src="./owl.png" alt="Healwright Icon" class="nav-logo-img" />
-            <span class="brand-text">Healwright</span>
-          </div>
-          <p>Built for the modern web automation tests.</p>
+    <footer class="foot">
+        <div class="wrap foot-inner">
+            <a class="brand" href="./">
+                <img src="owl.png" alt="" width="22" height="26">
+                <span>Healwright</span>
+            </a>
+            <nav class="foot-links" aria-label="Footer">
+                <a href="get-started.html">Guide</a>
+                <a href="https://github.com/amrsa1/healwright" target="_blank" rel="noopener noreferrer">GitHub</a>
+                <a href="https://www.npmjs.com/package/healwright" target="_blank" rel="noopener noreferrer">npm</a>
+                <a href="https://github.com/amrsa1/healwright/blob/main/CHANGELOG.md" target="_blank"
+                    rel="noopener noreferrer">Changelog</a>
+                <a href="https://github.com/amrsa1/healwright/blob/main/LICENSE" target="_blank"
+                    rel="noopener noreferrer">MIT license</a>
+                <a href="https://amr-salem.com" target="_blank" rel="noopener noreferrer">Contact</a>
+            </nav>
+            <p class="foot-copy">&copy; 2026 Healwright</p>
         </div>
-        <div class="footer-links">
-          <a href="get-started.html">Documentation</a>
-          <a
-            href="https://github.com/amrsa1/healwright"
-            target="_blank"
-            rel="noopener noreferrer"
-            >GitHub</a
-          >
-          <a
-            href="https://www.npmjs.com/package/healwright"
-            target="_blank"
-            rel="noopener noreferrer"
-            >NPM</a
-          >
-          <a
-            href="https://github.com/amrsa1/healwright/blob/main/LICENSE"
-            target="_blank"
-            rel="noopener noreferrer"
-            >License</a
-          >
-        </div>
-      </div>
-      <div class="container copyright">
-        &copy; 2026 Healwright. All rights reserved.
-      </div>
     </footer>
+</body>
 
-    <script>
-      lucide.createIcons();
-
-      // Copy code from a code-block-wrap
-      function copyBlock(btn) {
-        const wrap = btn.closest(".code-block-wrap");
-        const code = wrap.querySelector("code").textContent;
-        navigator.clipboard.writeText(code).then(() => {
-          btn.classList.add("copied");
-          btn.innerHTML = '<i data-lucide="check"></i> Copied';
-          lucide.createIcons({ nodes: btn.querySelectorAll("[data-lucide]") });
-          setTimeout(() => {
-            btn.classList.remove("copied");
-            btn.innerHTML = '<i data-lucide="clipboard"></i> Copy';
-            lucide.createIcons({
-              nodes: btn.querySelectorAll("[data-lucide]"),
-            });
-          }, 2000);
-        });
-      }
-
-      // Copy text helper (for install command)
-      function copyText(text, btn) {
-        navigator.clipboard.writeText(text);
-      }
-
-      // Staggered fade-in for step blocks on scroll
-      const stepObserver = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              entry.target.style.animation = "none";
-              void entry.target.offsetHeight;
-              entry.target.style.animation = "";
-            }
-          });
-        },
-        { threshold: 0.15 },
-      );
-
-      document
-        .querySelectorAll(".step-block")
-        .forEach((el) => stepObserver.observe(el));
-    </script>
-  </body>
 </html>
