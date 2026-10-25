@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { healPlanJsonSchema, HealPlan } from '../src/types';
-import { strictJsonSchema, isReasoningModel } from '../src/providers/types';
-import { buildOpenAIRequest } from '../src/providers/openai';
-import { buildAnthropicRequest } from '../src/providers/anthropic';
-import { buildGoogleRequest } from '../src/providers/google';
+import { strictJsonSchema, isReasoningModel, DEFAULT_MODELS, PROVIDER_TIMEOUT_MS } from '../src/providers/types';
+import { buildOpenAIRequest, openaiClientOptions } from '../src/providers/openai';
+import { buildAnthropicRequest, anthropicText, anthropicClientOptions } from '../src/providers/anthropic';
+import { buildGoogleRequest, googleClientOptions } from '../src/providers/google';
 import { buildSystemPrompt } from '../src/prompt';
 
 const input = {
@@ -89,15 +89,75 @@ describe('buildOpenAIRequest', () => {
 });
 
 describe('buildAnthropicRequest', () => {
-  it('passes the JSON schema as an output format', () => {
-    const req: any = buildAnthropicRequest(input, 'claude-sonnet-4-20250514');
-    expect(req.output_format).toEqual({ type: 'json_schema', schema: healPlanJsonSchema });
+  it('asks for structured output through output_config', () => {
+    const req: any = buildAnthropicRequest(input, 'claude-sonnet-5-5');
+    expect(req.output_config.format).toEqual({ type: 'json_schema', schema: healPlanJsonSchema });
+    expect(req.output_format).toBeUndefined();
   });
 
   it('keeps the system prompt and user content intact', () => {
-    const req: any = buildAnthropicRequest(input, 'claude-sonnet-4-20250514');
+    const req: any = buildAnthropicRequest(input, 'claude-sonnet-5-5');
     expect(req.system).toBe('system');
     expect(req.messages[0].content).toBe(input.userContent);
+  });
+
+  it('keeps effort low on models that accept it, and omits it elsewhere', () => {
+    expect((buildAnthropicRequest(input, 'claude-sonnet-5-5') as any).output_config.effort).toBe('low');
+    expect((buildAnthropicRequest(input, 'claude-haiku-4-5') as any).output_config.effort).toBeUndefined();
+  });
+
+  it('opts into server-side refusal fallback only when calling the Claude API directly', () => {
+    const direct: any = buildAnthropicRequest(input, 'claude-sonnet-5-5');
+    expect(direct.fallbacks).toBe('default');
+    expect(direct.betas).toContain('server-side-fallback-2026-07-01');
+
+    const viaGateway: any = buildAnthropicRequest(input, 'claude-sonnet-5-5', { gateway: true });
+    expect(viaGateway.fallbacks).toBeUndefined();
+    expect(viaGateway.betas).toBeUndefined();
+
+    expect((buildAnthropicRequest(input, 'claude-haiku-4-5') as any).fallbacks).toBeUndefined();
+  });
+});
+
+describe('anthropicText', () => {
+  it('reads the text block even when thinking blocks come first', () => {
+    const resp = { stop_reason: 'end_turn', content: [{ type: 'thinking', thinking: '' }, { type: 'text', text: '{"candidates":[]}' }] };
+    expect(anthropicText(resp)).toBe('{"candidates":[]}');
+  });
+
+  it('returns nothing when the model declined', () => {
+    expect(anthropicText({ stop_reason: 'refusal', content: [{ type: 'text', text: 'partial' }] })).toBeNull();
+  });
+});
+
+describe('anthropicClientOptions', () => {
+  it('keeps sending X-Api-Key to a custom endpoint', () => {
+    const o: any = anthropicClientOptions({ apiKey: 'k', baseURL: 'https://gateway.example' });
+    expect(o.baseURL).toBe('https://gateway.example');
+    expect(o.defaultHeaders).toEqual({ 'X-Api-Key': 'k', Authorization: null });
+  });
+
+  it("uses the SDK's own authentication against the Claude API", () => {
+    expect((anthropicClientOptions({ apiKey: 'k' }) as any).defaultHeaders).toBeUndefined();
+  });
+});
+
+describe('provider clients', () => {
+  it('leave retries to healwright and bound every request', () => {
+    for (const o of [anthropicClientOptions({ apiKey: 'k' }), openaiClientOptions({ apiKey: 'k' })] as any[]) {
+      expect(o.maxRetries).toBe(0);
+      expect(o.timeout).toBe(PROVIDER_TIMEOUT_MS);
+    }
+    const g: any = googleClientOptions({ apiKey: 'k' });
+    expect(g.httpOptions.retryOptions).toEqual({ attempts: 1 });
+    expect(g.httpOptions.timeout).toBe(PROVIDER_TIMEOUT_MS);
+  });
+});
+
+describe('DEFAULT_MODELS', () => {
+  it('points Anthropic at a current Claude model', () => {
+    expect(DEFAULT_MODELS.anthropic).toBe('claude-sonnet-5-5');
+    expect(DEFAULT_MODELS.claude).toBe('claude-sonnet-5-5');
   });
 });
 

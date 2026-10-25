@@ -4,7 +4,7 @@
  */
 
 import { GoogleGenAI } from "@google/genai";
-import { AIProvider, AIProviderConfig, GenerateHealPlanInput, HealPlanResult, DEFAULT_MODELS, cleanJson } from "./types";
+import { AIProvider, AIProviderConfig, GenerateHealPlanInput, HealPlanResult, DEFAULT_MODELS, PROVIDER_TIMEOUT_MS, cleanJson } from "./types";
 import { HealPlan } from "../types";
 import { healLog } from "../logger";
 
@@ -23,16 +23,28 @@ export function buildGoogleRequest(input: GenerateHealPlanInput, model: string):
     };
 }
 
+/**
+ * Client options. The SDK otherwise makes five attempts with up to 60 s
+ * between them, on top of healwright's own retries.
+ */
+export function googleClientOptions(config: Pick<AIProviderConfig, "apiKey" | "baseURL">) {
+    return {
+        apiKey: config.apiKey,
+        httpOptions: {
+            timeout: PROVIDER_TIMEOUT_MS,
+            retryOptions: { attempts: 1 },
+            ...(config.baseURL ? { baseUrl: config.baseURL } : {}),
+        },
+    };
+}
+
 export class GoogleProvider implements AIProvider {
     readonly name = "google" as const;
     private ai: GoogleGenAI;
     private model: string;
 
     constructor(config: AIProviderConfig) {
-        this.ai = new GoogleGenAI({
-            apiKey: config.apiKey,
-            ...(config.baseURL ? { httpOptions: { baseUrl: config.baseURL } } : {}),
-        });
+        this.ai = new GoogleGenAI(googleClientOptions(config));
         this.model = config.model ?? DEFAULT_MODELS.google;
     }
 

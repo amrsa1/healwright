@@ -10,6 +10,7 @@ import {
     GenerateHealPlanInput,
     HealPlanResult,
     DEFAULT_MODELS,
+    PROVIDER_TIMEOUT_MS,
     cleanJson,
     isReasoningModel,
 } from "./types";
@@ -46,16 +47,23 @@ export function buildOpenAIRequest(input: GenerateHealPlanInput, model: string):
     return request;
 }
 
+/** Client options: a bounded request, with retries left to healwright. */
+export function openaiClientOptions(config: Pick<AIProviderConfig, "apiKey" | "baseURL">) {
+    return {
+        apiKey: config.apiKey,
+        timeout: PROVIDER_TIMEOUT_MS,
+        maxRetries: 0,
+        ...(config.baseURL ? { baseURL: config.baseURL } : {}),
+    };
+}
+
 export class OpenAIProvider implements AIProvider {
     readonly name = "openai" as const;
     private client: OpenAI;
     private model: string;
 
     constructor(config: AIProviderConfig) {
-        this.client = new OpenAI({
-            apiKey: config.apiKey,
-            ...(config.baseURL ? { baseURL: config.baseURL } : {}),
-        });
+        this.client = new OpenAI(openaiClientOptions(config));
         this.model = config.model ?? DEFAULT_MODELS.openai;
     }
 

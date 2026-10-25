@@ -114,11 +114,18 @@ export function cleanJson(raw: string): string {
     return s.trim();
 }
 
+/**
+ * Per-request ceiling for provider calls. The SDKs default to ten minutes,
+ * which would stall a test far past its own timeout on a hung connection.
+ * Retries are left to healwright's `withRetry`, so the SDKs' own are off.
+ */
+export const PROVIDER_TIMEOUT_MS = 30_000;
+
 export const DEFAULT_MODELS: Record<ProviderName, string> = {
     openai: "gpt-5-nano",
     gpt: "gpt-5-nano",
-    anthropic: "claude-sonnet-4-20250514",
-    claude: "claude-sonnet-4-20250514",
+    anthropic: "claude-sonnet-5-5",
+    claude: "claude-sonnet-5-5",
     google: "gemini-2.5-flash",
     gemini: "gemini-2.5-flash",
     local: "gemma3:4b",
