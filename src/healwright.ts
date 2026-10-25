@@ -38,6 +38,7 @@ import {
   updateJson,
   appendLog,
   cacheKey,
+  redactUrl,
   meetsConfidence,
   normalizeConfidence,
   withRetry,
@@ -161,7 +162,7 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     const result = await withRetry(
       () => aiProvider!.generateHealPlan({
         systemPrompt: buildSystemPrompt(),
-        userContent: buildUserContent(page.url(), action, contextName, candidates),
+        userContent: buildUserContent(redactUrl(page.url()), action, contextName, candidates),
         jsonSchema: healPlanJsonSchema,
       }),
       2, // 2 retries (3 total attempts)
@@ -299,7 +300,7 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     const ts = new Date().toISOString();
     const key = cacheKey(page, action, contextName);
     const aiOnlyMode = isAiOnlyTarget(target);
-    const url = page.url();
+    const url = redactUrl(page.url());
     let originalError: Error | null = null;
 
     // Try original locator first
@@ -344,7 +345,13 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     } else if (cached) {
       try {
         const cachedLoc = buildLocator(page, cached);
-        await waitForReady(cachedLoc, action, timeout);
+        if (options?.forceClick) {
+          // A hover-only control is never visible, so waiting for it would
+          // always fail and re-ask the model. Require a single match instead.
+          if (await cachedLoc.count() !== 1) throw new Error("cached strategy no longer resolves");
+        } else {
+          await waitForReady(cachedLoc, action, timeout);
+        }
         await performAction(cachedLoc);
         if (action === "click" || action === "dblclick" || action === "selectOption") await waitForStable(page);
         await log({ ts, url, key, action, contextName, used: "cache", success: true, strategy: cached });
@@ -368,6 +375,7 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
 
       if (!aiResult.plan) {
         await log({ ts, url, key, action, contextName, used: "healed", success: false, error: "AI returned no plan", tokenUsage });
+        recordHealEvent({ outcome: "failed", action, contextName, url, testName: currentTestName });
         healLog.noValidCandidate(contextName);
         if (tokenUsage) healLog.tokenUsage(tokenUsage.inputTokens, tokenUsage.outputTokens, tokenUsage.totalTokens);
         throw new HealError("AI returned no suggestions", {
@@ -500,7 +508,7 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     options?: GetLocatorOptions,
   ): Promise<Locator> {
     const action: Action = options?.as ?? "locate";
-    const url = page.url();
+    const url = redactUrl(page.url());
 
     if (!isAiOnlyTarget(selector)) {
       const original = toLocator(page, selector);
@@ -618,13 +626,11 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     check: (target, contextName) => healAction(
       "check", target, contextName,
       (loc) => loc.check({ timeout }),
-      { aiAction: "fill" } // Use fill candidates for check (inputs)
     ),
 
     uncheck: (target, contextName) => healAction(
       "uncheck", target, contextName,
       (loc) => loc.uncheck({ timeout }),
-      { aiAction: "fill" } // Use fill candidates for uncheck (inputs)
     ),
 
     hover: (target, contextName) => healAction(

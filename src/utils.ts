@@ -138,6 +138,16 @@ const TEXT_ENTRY_PARTS = [
   "select", "[role='combobox']", "[data-testid]",
 ];
 
+// Controls that can be checked, selected or switched on. Custom toggles are
+// usually ARIA widgets or labels, not native inputs.
+const TOGGLE_PARTS = [
+  "input[type='checkbox']", "input[type='radio']",
+  "[role='checkbox']", "[role='radio']", "[role='switch']",
+  "[role='menuitemcheckbox']", "[role='menuitemradio']",
+  "[aria-checked]", "[aria-pressed]", "label",
+  "[data-testid]", "[data-test]", "[data-test-id]", "[data-qa]", "[data-cy]",
+];
+
 // Elements that expose a set of options.
 const CHOICE_PARTS = [
   "select", "[role='combobox']", "[role='listbox']", "option", "[role='option']",
@@ -164,11 +174,12 @@ export function candidateSelector(action: Action): string {
       return dedupe(CHOICE_PARTS);
     case "focus":
       return dedupe([...CLICKABLE_PARTS, ...TEXT_ENTRY_PARTS]);
-    case "locate":
-      return dedupe([...CLICKABLE_PARTS, ...TEXT_ENTRY_PARTS, ...CHOICE_PARTS]);
-    case "fill":
     case "check":
     case "uncheck":
+      return dedupe(TOGGLE_PARTS);
+    case "locate":
+      return dedupe([...CLICKABLE_PARTS, ...TEXT_ENTRY_PARTS, ...TOGGLE_PARTS, ...CHOICE_PARTS]);
+    case "fill":
     default:
       return dedupe(TEXT_ENTRY_PARTS);
   }
@@ -442,6 +453,19 @@ export async function appendLog(reportFile: string, entry: unknown) {
     await fs.mkdir(dir, { recursive: true });
   } catch { /* ignore */ }
   await fs.appendFile(reportFile, JSON.stringify(entry) + "\n", "utf8").catch(() => {});
+}
+
+/**
+ * A page URL without its query string or fragment, which can carry session
+ * tokens and one-time links. This is what reaches the model and the logs.
+ */
+export function redactUrl(raw: string): string {
+  try {
+    const u = new URL(raw);
+    return u.origin === "null" ? `${u.protocol}${u.pathname}` : `${u.origin}${u.pathname}`;
+  } catch {
+    return raw.split(/[?#]/)[0];
+  }
 }
 
 /**

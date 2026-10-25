@@ -192,3 +192,61 @@ describe('heal.getLocator', () => {
     expect(typeof loc.count).toBe('function');
   });
 });
+
+describe('force clicks', () => {
+  it('reuses a cached heal for a control that only appears on hover', async () => {
+    const { cacheFile, reportFile } = paths();
+    await fs.writeFile(cacheFile, JSON.stringify({
+      'click::https://example.test/checkout::Delete button': { type: 'css', selector: 'button.destroy', context: 'Delete button' },
+    }));
+    const { page, calls } = createFakePage({ hidden: ['button.destroy'] });
+    const { provider } = createFakeProvider(planFor({ type: 'css', selector: 'button.destroy' }));
+    const healPage = withHealing(page, { enabled: true, aiProvider: provider as any, cacheFile, reportFile });
+
+    await healPage.heal.click('', 'Delete button', { force: true });
+
+    expect(calls.some(c => c.action === 'dispatchEvent' && c.selector === 'button.destroy')).toBe(true);
+    expect(provider.generateHealPlan).not.toHaveBeenCalled();
+    expect(getHealSummary().fromCache).toBe(1);
+  });
+});
+
+describe('heal summary accuracy', () => {
+  it('counts a heal the model had no answer for as failed', async () => {
+    const { page } = createFakePage();
+    const { provider } = createFakeProvider(null);
+    const healPage = withHealing(page, { enabled: true, aiProvider: provider as any, ...paths() });
+
+    await expect(healPage.heal.click('#gone', 'Submit button')).rejects.toThrow(HealError);
+
+    expect(getHealSummary().failed).toBe(1);
+  });
+});
+
+describe('page URLs', () => {
+  it('never sends or logs the query string, which can carry tokens', async () => {
+    const { page } = createFakePage({ url: 'https://example.test/checkout?session=s3cret#pay', present: ['label=Email'] });
+    const { provider, seen } = createFakeProvider(planFor({ type: 'label', text: 'Email' }));
+    const { cacheFile, reportFile } = paths();
+    const healPage = withHealing(page, { enabled: true, aiProvider: provider as any, cacheFile, reportFile });
+
+    await healPage.heal.fill('#gone', 'Email field', 'a@b.c');
+
+    expect(JSON.parse(seen[0].userContent).url).toBe('https://example.test/checkout');
+    expect(await fs.readFile(reportFile, 'utf8')).not.toContain('s3cret');
+    expect(getHealSummary().entries[0].url).toBe('https://example.test/checkout');
+  });
+});
+
+describe('check and uncheck', () => {
+  it('search custom checkboxes and switches, not just native inputs', async () => {
+    const { page, evaluateArgs } = createFakePage({ present: ['label=Terms'] });
+    const { provider } = createFakeProvider(planFor({ type: 'label', text: 'Terms' }));
+    const healPage = withHealing(page, { enabled: true, aiProvider: provider as any, ...paths() });
+
+    await healPage.heal.check('#gone', 'Accept the terms');
+
+    expect(evaluateArgs[0].selector).toContain("[role='checkbox']");
+    expect(evaluateArgs[0].selector).toContain("[role='switch']");
+  });
+});

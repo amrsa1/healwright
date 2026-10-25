@@ -14,18 +14,22 @@ export function createFakePage(opts: {
   url?: string;
   /** Selectors that resolve to exactly one visible element. */
   present?: string[];
+  /** Selectors that resolve to exactly one element that is not visible. */
+  hidden?: string[];
   candidates?: Record<string, unknown>[];
 } = {}) {
   const url = opts.url ?? 'https://example.test/checkout';
   const present = new Set(opts.present ?? []);
+  const hidden = new Set(opts.hidden ?? []);
   const calls: { action: string; selector: string }[] = [];
   const evaluateArgs: any[] = [];
 
   const makeLocator = (selector: string) => {
     const exists = present.has(selector);
+    const inDom = exists || hidden.has(selector);
     const locator: any = {
       __selector: selector,
-      count: vi.fn(async () => (exists ? 1 : 0)),
+      count: vi.fn(async () => (inDom ? 1 : 0)),
       isVisible: vi.fn(async () => exists),
       first: vi.fn(() => locator),
       waitFor: vi.fn(async ({ timeout }: { timeout?: number } = {}) => {
