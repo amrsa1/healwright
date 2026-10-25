@@ -52,6 +52,9 @@ const DISABLED_HINT =
   "Set SELF_HEAL=1 (and AI_API_KEY, unless AI_PROVIDER=local) to enable it, " +
   "or pass a selector instead of an empty string.";
 
+const WARN_NO_ACTION = "Healing is in report-only mode (mode: 'warn'), so no action was taken";
+const WARN_NOT_REPLACED = "Healing is in report-only mode (mode: 'warn'), so the locator was not replaced";
+
 /**
  * Enhance a Playwright Page with self-healing capabilities.
  * 
@@ -233,6 +236,45 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     return { choice: null, strategiesTried, rejectedForConfidence };
   }
 
+  /** True when a strategy still points at exactly one element. */
+  async function resolvesUniquely(strategy: StrategyT): Promise<boolean> {
+    try {
+      return (await buildLocator(page, strategy).count()) === 1;
+    } catch {
+      return false;
+    }
+  }
+
+  interface WouldHeal {
+    ts: string;
+    url: string;
+    key: string;
+    action: Action;
+    contextName: string;
+    strategy: StrategyT;
+    source: "cache" | "ai";
+    confidence?: number;
+    why?: string;
+    tokenUsage?: TokenUsage | null;
+  }
+
+  /** Report-only mode: record the heal that was available, without applying it. */
+  async function reportWouldHeal(w: WouldHeal) {
+    await log({
+      ts: w.ts, url: w.url, key: w.key, action: w.action, contextName: w.contextName,
+      used: "warn", success: false, source: w.source,
+      confidence: w.confidence, why: w.why, strategy: w.strategy, tokenUsage: w.tokenUsage,
+    });
+    recordHealEvent({
+      outcome: "wouldHeal", action: w.action, contextName: w.contextName, url: w.url,
+      confidence: w.confidence === undefined ? undefined : normalizeConfidence(w.confidence),
+      strategy: w.strategy,
+      testName: currentTestName,
+    });
+    healLog.wouldHeal(w.contextName, w.strategy);
+    if (w.tokenUsage) healLog.tokenUsage(w.tokenUsage.inputTokens, w.tokenUsage.outputTokens, w.tokenUsage.totalTokens);
+  }
+
   async function saveToCache(key: string, strategy: StrategyT, contextName: string) {
     mem.set(key, strategy);
     const entry = { ...strategy, context: contextName, testName: currentTestName };
@@ -290,7 +332,16 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     const cache = await ensureDiskCacheLoaded();
     const cached = mem.get(key) ?? cache[key];
 
-    if (cached) {
+    if (cached && mode === "warn") {
+      // Report-only mode never applies a heal, cached or fresh. A committed
+      // cache would otherwise turn every report into a silent pass.
+      if (await resolvesUniquely(cached)) {
+        await reportWouldHeal({ ts, url, key, action, contextName, strategy: cached, source: "cache" });
+        if (originalError) throw originalError;
+        throw new HealError(WARN_NO_ACTION, { action, contextName, url, candidatesAnalyzed: 0, strategiesTried: [] });
+      }
+      healLog.cacheMiss(contextName);
+    } else if (cached) {
       try {
         const cachedLoc = buildLocator(page, cached);
         await waitForReady(cachedLoc, action, timeout);
@@ -368,22 +419,12 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
       // Report-only mode: say what would have happened, then let the original
       // failure stand so the suite still reflects the state of the app.
       if (mode === "warn") {
-        await log({
-          ts, url, key, action, contextName, used: "warn", success: false,
-          confidence: choice.confidence, why: choice.why, strategy: choice.strategy, tokenUsage,
+        await reportWouldHeal({
+          ts, url, key, action, contextName, strategy: choice.strategy, source: "ai",
+          confidence: choice.confidence, why: choice.why, tokenUsage,
         });
-        recordHealEvent({
-          outcome: "wouldHeal", action, contextName, url,
-          confidence: normalizeConfidence(choice.confidence),
-          strategy: choice.strategy,
-          testName: currentTestName,
-        });
-        healLog.wouldHeal(contextName, choice.strategy);
-        if (tokenUsage) healLog.tokenUsage(tokenUsage.inputTokens, tokenUsage.outputTokens, tokenUsage.totalTokens);
         if (originalError) throw originalError;
-        throw new HealError("Healing is in report-only mode (mode: 'warn'), so no action was taken", {
-          action, contextName, url, candidatesAnalyzed, strategiesTried,
-        });
+        throw new HealError(WARN_NO_ACTION, { action, contextName, url, candidatesAnalyzed, strategiesTried });
       }
 
       await saveToCache(key, choice.strategy, contextName);
@@ -480,14 +521,16 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     const cache = await ensureDiskCacheLoaded();
     const cached = mem.get(key) ?? cache[key];
     if (cached) {
-      try {
-        const cachedLoc = buildLocator(page, cached);
-        if (await cachedLoc.count() === 1) {
-          recordHealEvent({ outcome: "cache", action, contextName, url, strategy: cached, testName: currentTestName });
-          healLog.usedCache(contextName);
-          return cachedLoc;
+      if (await resolvesUniquely(cached)) {
+        if (mode === "warn") {
+          await reportWouldHeal({ ts: new Date().toISOString(), url, key, action, contextName, strategy: cached, source: "cache" });
+          throw new HealError(WARN_NOT_REPLACED, { action, contextName, url, candidatesAnalyzed: 0, strategiesTried: [] });
         }
-      } catch { /* stale cache — re-heal below */ }
+        recordHealEvent({ outcome: "cache", action, contextName, url, strategy: cached, testName: currentTestName });
+        healLog.usedCache(contextName);
+        return buildLocator(page, cached);
+      }
+      // Stale cache: re-heal below.
       healLog.cacheMiss(contextName);
     }
 
@@ -517,14 +560,11 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     const choice = pickResult.choice;
 
     if (mode === "warn") {
-      recordHealEvent({
-        outcome: "wouldHeal", action, contextName, url,
-        confidence: normalizeConfidence(choice.confidence),
-        strategy: choice.strategy,
-        testName: currentTestName,
+      await reportWouldHeal({
+        ts: new Date().toISOString(), url, key, action, contextName, strategy: choice.strategy, source: "ai",
+        confidence: choice.confidence, why: choice.why, tokenUsage,
       });
-      healLog.wouldHeal(contextName, choice.strategy);
-      throw new HealError("Healing is in report-only mode (mode: 'warn'), so the locator was not replaced", {
+      throw new HealError(WARN_NOT_REPLACED, {
         action, contextName, url, candidatesAnalyzed, strategiesTried: pickResult.strategiesTried,
       });
     }

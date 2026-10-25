@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import fs from 'node:fs';
 import { recordHealEvent, getHealSummary, resetHealSummary } from '../src/summary';
 import { normalizeConfidence, meetsConfidence } from '../src/utils';
 
@@ -89,5 +90,35 @@ describe('heal summary', () => {
     recordHealEvent({ outcome: 'healed', action: 'click', contextName: 'A', url: 'https://x/' });
     getHealSummary().entries.push({ outcome: 'healed', action: 'x', contextName: 'y', url: 'z' });
     expect(getHealSummary().entries).toHaveLength(1);
+  });
+});
+
+describe('heal summary across processes', () => {
+  afterEach(() => {
+    delete process.env.TEST_WORKER_INDEX;
+  });
+
+  it('lets the Playwright runner read heals its workers recorded', async () => {
+    // A worker process records a heal...
+    process.env.TEST_WORKER_INDEX = '0';
+    vi.resetModules();
+    const worker = await import('../src/summary');
+    worker.recordHealEvent({ outcome: 'healed', action: 'click', contextName: 'Submit', url: 'https://x/' });
+    delete process.env.TEST_WORKER_INDEX;
+
+    // ...and global teardown runs in the runner process, which ran no tests itself.
+    vi.resetModules();
+    const runner = await import('../src/summary');
+    const s = runner.getHealSummary();
+    expect(s.healed).toBe(1);
+    expect(s.entries[0].contextName).toBe('Submit');
+  });
+
+  it('ignores heals left over from an earlier run', () => {
+    const lastRun = Date.now() - process.uptime() * 1000 - 60_000;
+    const row = { ts: lastRun, outcome: 'healed', action: 'click', contextName: 'Old', url: 'https://x/' };
+    fs.appendFileSync(process.env.HEALWRIGHT_SUMMARY_FILE!, JSON.stringify(row) + '\n');
+
+    expect(getHealSummary().total).toBe(0);
   });
 });

@@ -107,6 +107,39 @@ describe("mode: 'warn'", () => {
     expect(summary.healed).toBe(0);
     expect(summary.entries[0].strategy).toMatchObject({ type: 'label', text: 'Email' });
   });
+
+  it('reports a cached heal instead of applying it', async () => {
+    const { cacheFile, reportFile } = paths();
+    await fs.writeFile(cacheFile, JSON.stringify({
+      'fill::https://example.test/checkout::Email field': { type: 'label', text: 'Email', context: 'Email field' },
+    }));
+    const { page, calls } = createFakePage({ present: ['label=Email'] });
+    const { provider } = createFakeProvider(planFor({ type: 'label', text: 'Email' }));
+    const healPage = withHealing(page, {
+      enabled: true, mode: 'warn', aiProvider: provider as any, cacheFile, reportFile,
+    });
+
+    await expect(healPage.heal.fill('#gone', 'Email field', 'a@b.c')).rejects.toThrow();
+
+    expect(calls.some(c => c.action === 'fill')).toBe(false);
+    expect(getHealSummary()).toMatchObject({ wouldHeal: 1, fromCache: 0 });
+  });
+
+  it('does not hand back a cached Locator from getLocator', async () => {
+    const { cacheFile, reportFile } = paths();
+    await fs.writeFile(cacheFile, JSON.stringify({
+      'locate::https://example.test/checkout::Cart badge': { type: 'role', role: 'status', name: 'Cart', context: 'Cart badge' },
+    }));
+    const { page } = createFakePage({ present: ['role=status[name=Cart]'] });
+    const { provider } = createFakeProvider(planFor({ type: 'role', role: 'status', name: 'Cart' }));
+    const healPage = withHealing(page, {
+      enabled: true, mode: 'warn', aiProvider: provider as any, cacheFile, reportFile,
+    });
+
+    await expect(healPage.heal.getLocator('.gone', 'Cart badge')).rejects.toThrow(HealError);
+
+    expect(getHealSummary()).toMatchObject({ wouldHeal: 1, fromCache: 0 });
+  });
 });
 
 describe('candidate collection', () => {
