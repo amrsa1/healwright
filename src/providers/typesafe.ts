@@ -8,8 +8,7 @@
  * attributes. The answer can only ever be an element that was on the page.
  */
 
-import { TypeSafeClient, choice, noul } from "@typesafe-ai/sdk";
-import type { ChoiceResponse, NoulResponse } from "@typesafe-ai/sdk";
+import type { TypeSafeClient } from "@typesafe-ai/sdk";
 import {
     AIProvider,
     AIProviderConfig,
@@ -21,6 +20,7 @@ import {
 } from "./types";
 import type { HealPlanT, StrategyT } from "../types";
 import { healLog } from "../logger";
+import { loadSdk } from "./load";
 
 type Candidate = Record<string, unknown>;
 
@@ -148,24 +148,30 @@ export function buildTypeSafeRequest(heal: HealRequest) {
     const request = {
         state: { target: heal.contextName, action: heal.action, page: heal.url },
         questions: {
-            element: choice(
-                "Which element on the page is the one described in `target`? The test is about to " +
-                "perform `action` on it. Match on what a person would see or hear: its text, label, " +
-                "role and purpose. Choose none when no element fits the description.",
+            element: {
+                type: "choice" as const,
+                instructions:
+                    "Which element on the page is the one described in `target`? The test is about to " +
+                    "perform `action` on it. Match on what a person would see or hear: its text, label, " +
+                    "role and purpose. Choose none when no element fits the description.",
                 criteria,
-            ),
-            present: noul({
-                question: "Is the element described in `target` one of these page elements?",
-                elements: descriptions,
-            }),
+            },
+            present: {
+                type: "noul" as const,
+                instructions: {
+                    question: "Is the element described in `target` one of these page elements?",
+                    elements: descriptions,
+                },
+            },
         },
     };
     return { request, labels };
 }
 
+/** The two answers, as the System One API returns them. */
 interface TypeSafeAnswers {
-    element: ChoiceResponse;
-    present: NoulResponse;
+    element: { choice: string; confidence: number; probabilities: Record<string, number> };
+    present: { noul: number };
 }
 
 /** Turn Jev's answers into a heal plan; policy lives here, in code. */
@@ -205,12 +211,17 @@ export function typeSafeClientOptions(config: Pick<AIProviderConfig, "apiKey" | 
 
 export class TypeSafeProvider implements AIProvider {
     readonly name = "typesafe" as const;
-    private client: TypeSafeClient;
+    private client: Promise<TypeSafeClient> | null = null;
     private model: string;
 
-    constructor(config: AIProviderConfig) {
-        this.client = new TypeSafeClient(typeSafeClientOptions(config));
+    constructor(private readonly config: AIProviderConfig) {
         this.model = config.model ?? DEFAULT_MODELS.typesafe;
+    }
+
+    private getClient(): Promise<TypeSafeClient> {
+        this.client ??= loadSdk("@typesafe-ai/sdk", "TypeSafe", () => import("@typesafe-ai/sdk"))
+            .then(({ TypeSafeClient }) => new TypeSafeClient(typeSafeClientOptions(this.config)));
+        return this.client;
     }
 
     async generateHealPlan(input: GenerateHealPlanInput): Promise<HealPlanResult> {
@@ -219,7 +230,8 @@ export class TypeSafeProvider implements AIProvider {
         const heal: HealRequest = input.heal ?? JSON.parse(input.userContent);
         const { request, labels } = buildTypeSafeRequest(heal);
         try {
-            const resp = await this.client.systemOne({ ...request, model: this.model });
+            const client = await this.getClient();
+            const resp = await client.systemOne({ ...request, model: this.model });
             healLog.aiResponse(JSON.stringify(resp.answers).length);
 
             const inputTokens = resp.usage?.input_tokens ?? 0;

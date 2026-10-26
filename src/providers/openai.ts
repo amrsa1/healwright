@@ -3,7 +3,7 @@
  * Uses the official OpenAI SDK with structured outputs (responses API)
  */
 
-import OpenAI from "openai";
+import type OpenAI from "openai";
 import {
     AIProvider,
     AIProviderConfig,
@@ -16,6 +16,7 @@ import {
 } from "./types";
 import { HealPlan } from "../types";
 import { healLog } from "../logger";
+import { loadSdk } from "./load";
 
 /**
  * Build the request body. Kept separate from the call so the shape is testable
@@ -59,17 +60,23 @@ export function openaiClientOptions(config: Pick<AIProviderConfig, "apiKey" | "b
 
 export class OpenAIProvider implements AIProvider {
     readonly name = "openai" as const;
-    private client: OpenAI;
+    private client: Promise<OpenAI> | null = null;
     private model: string;
 
-    constructor(config: AIProviderConfig) {
-        this.client = new OpenAI(openaiClientOptions(config));
+    constructor(private readonly config: AIProviderConfig) {
         this.model = config.model ?? DEFAULT_MODELS.openai;
+    }
+
+    private getClient(): Promise<OpenAI> {
+        this.client ??= loadSdk("openai", "OpenAI", () => import("openai"))
+            .then(({ default: OpenAI }) => new OpenAI(openaiClientOptions(this.config)));
+        return this.client;
     }
 
     async generateHealPlan(input: GenerateHealPlanInput): Promise<HealPlanResult> {
         try {
-            const resp = await this.client.responses.create(
+            const client = await this.getClient();
+            const resp = await client.responses.create(
                 buildOpenAIRequest(input, this.model) as any,
             ) as any;
 

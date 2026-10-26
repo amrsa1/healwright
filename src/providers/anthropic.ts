@@ -3,7 +3,7 @@
  * Uses the official @anthropic-ai/sdk with structured outputs
  */
 
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import {
     AIProvider,
     AIProviderConfig,
@@ -15,6 +15,7 @@ import {
 } from "./types";
 import { HealPlan } from "../types";
 import { healLog } from "../logger";
+import { loadSdk } from "./load";
 
 const SERVER_FALLBACK_BETA = "server-side-fallback-2026-07-01";
 
@@ -96,22 +97,28 @@ export function anthropicClientOptions(config: Pick<AIProviderConfig, "apiKey" |
 
 export class AnthropicProvider implements AIProvider {
     readonly name = "anthropic" as const;
-    private client: Anthropic;
+    private client: Promise<Anthropic> | null = null;
     private model: string;
     private gateway: boolean;
 
-    constructor(config: AIProviderConfig) {
-        this.client = new Anthropic(anthropicClientOptions(config) as any);
+    constructor(private readonly config: AIProviderConfig) {
         this.model = config.model ?? DEFAULT_MODELS.anthropic;
         this.gateway = Boolean(config.baseURL);
     }
 
+    private getClient(): Promise<Anthropic> {
+        this.client ??= loadSdk("@anthropic-ai/sdk", "Anthropic", () => import("@anthropic-ai/sdk"))
+            .then(({ default: Anthropic }) => new Anthropic(anthropicClientOptions(this.config) as any));
+        return this.client;
+    }
+
     async generateHealPlan(input: GenerateHealPlanInput): Promise<HealPlanResult> {
         try {
+            const client = await this.getClient();
             const request = buildAnthropicRequest(input, this.model, { gateway: this.gateway });
             const resp = request.betas
-                ? await this.client.beta.messages.create(request as any) as any
-                : await this.client.messages.create(request as any) as any;
+                ? await client.beta.messages.create(request as any) as any
+                : await client.messages.create(request as any) as any;
 
             const content = anthropicText(resp);
             healLog.aiResponse(content?.length ?? 0);
