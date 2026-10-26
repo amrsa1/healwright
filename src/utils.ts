@@ -478,12 +478,28 @@ export function redactUrl(raw: string): string {
   }
 }
 
+// Path segments that identify a record rather than a page: numbers, UUIDs,
+// long hex ids (commit SHAs, Mongo ids) and ULIDs.
+const ID_SEGMENT = [
+  /^\d+$/,
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+  /^[0-9a-f]{16,}$/i,
+  /^[0-9A-HJKMNP-TV-Z]{26}$/,
+];
+
 /**
- * Generate cache key for action + page + context
+ * Generate cache key for action + page + context.
+ *
+ * Record ids in the path become `:id`, so a heal found on /orders/123 is
+ * reused on /orders/124 instead of every record growing its own entry.
  */
 export function cacheKey(page: Page, action: Action, contextName: string): string {
   const u = new URL(page.url());
-  return `${action}::${u.origin}${u.pathname}::${contextName}`;
+  const path = u.pathname
+    .split("/")
+    .map(seg => (seg && ID_SEGMENT.some(re => re.test(seg)) ? ":id" : seg))
+    .join("/");
+  return `${action}::${u.origin}${path}::${contextName}`;
 }
 
 /**
