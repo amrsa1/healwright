@@ -1,10 +1,29 @@
 name: Release
 
+# Releases follow the version in package.json.
+#
+#   Push to main   If package.json holds a version that isn't fully released
+#                  (on npm, tagged, GitHub Release), this releases it. Merging a
+#                  PR that bumps the version and adds its CHANGELOG section is
+#                  all a release takes.
+#   Manual run     Bump patch / minor / major, or `none` to finish releasing
+#                  the version already in package.json.
+#
+# Every step checks what's already done, and nothing is pushed until npm has
+# the package, so a failed run never leaves a half release and can simply be
+# re-run. Publishing uses npm Trusted Publishing (OIDC), so there is no token
+# to expire. One-time setup, by a package owner:
+#
+#   npm login
+#   npm trust github healwright --file release.yml --repository amrsa1/healwright --allow-publish
+
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       bump:
-        description: "Version bump type ('none' = publish the version already in package.json)"
+        description: "Version bump ('none' = release the version already in package.json)"
         required: true
         type: choice
         options:
@@ -14,21 +33,107 @@ on:
           - none
         default: patch
       dry-run:
-        description: "Dry run (skip npm publish & GitHub release)"
+        description: "Dry run (build and plan only: no publish, push or GitHub Release)"
         required: false
         type: boolean
         default: false
 
 permissions:
-  contents: write      # push version commit + tag + create release
-  id-token: write      # npm provenance
+  contents: write      # push the version commit and tag, create the release
+  id-token: write      # npm Trusted Publishing and provenance
+
+# One release at a time; never cancel one halfway.
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   # ───────────────────────────────────────────────────────
-  #  Gate: run full CI checks before releasing
+  #  Plan: work out what, if anything, still needs doing
+  # ───────────────────────────────────────────────────────
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      bump: ${{ steps.plan.outputs.bump }}
+      release: ${{ steps.plan.outputs.release }}
+      publish: ${{ steps.plan.outputs.publish }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Decide what to release
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUMP: ${{ github.event_name == 'workflow_dispatch' && inputs.bump || 'none' }}
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          CURRENT=$(node -p "require('./package.json').version")
+          VERSION=$(node -e '
+            const [major, minor, patch] = process.argv[1].split(/[.-]/).map(Number);
+            const bump = process.argv[2];
+            console.log(
+              bump === "major" ? `${major + 1}.0.0`
+              : bump === "minor" ? `${major}.${minor + 1}.0`
+              : bump === "patch" ? `${major}.${minor}.${patch + 1}`
+              : process.argv[1]
+            );' "$CURRENT" "$BUMP")
+          TAG="v$VERSION"
+
+          ON_NPM=false
+          npm view "$NAME@$VERSION" version >/dev/null 2>&1 && ON_NPM=true
+          # The commit the tag points at; ^{} peels an annotated tag to its commit.
+          PEELED=$(git ls-remote origin "refs/tags/$TAG^{}" | cut -f1)
+          TAGGED_AT=${PEELED:-$(git ls-remote origin "refs/tags/$TAG" | cut -f1)}
+          HAS_RELEASE=false
+          gh release view "$TAG" >/dev/null 2>&1 && HAS_RELEASE=true
+
+          RELEASE=true
+          if [ "$ON_NPM" = true ] && [ -n "$TAGGED_AT" ] && [ "$HAS_RELEASE" = true ]; then
+            RELEASE=false
+            echo "### ✅ $TAG is already released" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$BUMP" = none ] && [ -n "$TAGGED_AT" ] && [ "$TAGGED_AT" != "$GITHUB_SHA" ]; then
+            # The tag marks the commit that was meant to ship. Publishing this
+            # later commit under that version would make the package, its
+            # provenance and the tag disagree. Release from the tag instead.
+            RELEASE=false
+            {
+              echo "### ⏭️ $TAG is tagged at ${TAGGED_AT:0:7}, not this commit"
+              echo ""
+              echo "Finish that release from its tag:"
+              echo ""
+              echo '```'
+              echo "gh workflow run release.yml --ref $TAG -f bump=none"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            TAG_STATE=none
+            [ -n "$TAGGED_AT" ] && TAG_STATE="at ${TAGGED_AT:0:7}"
+            echo "### 📦 Releasing $TAG (on npm: $ON_NPM, tag: $TAG_STATE, GitHub Release: $HAS_RELEASE)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          PUBLISH=true
+          [ "$ON_NPM" = true ] && PUBLISH=false
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "bump=$BUMP" >> "$GITHUB_OUTPUT"
+          echo "release=$RELEASE" >> "$GITHUB_OUTPUT"
+          echo "publish=$PUBLISH" >> "$GITHUB_OUTPUT"
+
+  # ───────────────────────────────────────────────────────
+  #  Gate: full checks before anything reaches npm
   # ───────────────────────────────────────────────────────
   quality-gate:
     name: Quality Gate
+    needs: plan
+    if: needs.plan.outputs.release == 'true' && needs.plan.outputs.publish == 'true'
     runs-on: ubuntu-latest
     environment: gemini
     env:
@@ -64,30 +169,43 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
+      - name: Browser tests (no API key needed)
+        run: npm run test:offline
+
       - name: E2E smoke tests
         run: npm run test:heal
 
   # ───────────────────────────────────────────────────────
-  #  Release: bump version → publish → GitHub release
+  #  Release: publish first, then push, then GitHub Release
   # ───────────────────────────────────────────────────────
   release:
     name: Publish to npm
-    needs: quality-gate
+    needs: [plan, quality-gate]
+    # Runs when there is something to release and the gate passed, or was
+    # skipped because npm already has this version.
+    if: >-
+      always() && needs.plan.outputs.release == 'true' &&
+      (needs.quality-gate.result == 'success' || needs.quality-gate.result == 'skipped')
     runs-on: ubuntu-latest
-
+    env:
+      VERSION: ${{ needs.plan.outputs.version }}
+      TAG: v${{ needs.plan.outputs.version }}
+      BUMP: ${{ needs.plan.outputs.bump }}
+      BRANCH: ${{ github.ref_name }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run || false }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0          # full history for changelog
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0          # full history for release notes
 
+      # No registry-url: setup-node would write a token placeholder into
+      # .npmrc, and npm must authenticate over OIDC instead.
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
-          registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
         run: npm ci
@@ -97,19 +215,18 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Resolve version
-        id: version
+      - name: Prepare version commit and tag (local only)
         run: |
-          if [ "${{ inputs.bump }}" = "none" ]; then
-            # Publish-only: reuse the version already committed, so a failed
-            # publish can be retried without bumping again.
-            VERSION="v$(node -p "require('./package.json').version")"
-            echo "### 📦 Publishing existing version: ${VERSION}" >> "$GITHUB_STEP_SUMMARY"
-          else
-            VERSION=$(npm version ${{ inputs.bump }} -m "chore(release): v%s")
-            echo "### 📦 Version bump: ${VERSION}" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$BUMP" != none ]; then
+            npm version "$BUMP" -m "chore(release): v%s"
+          elif ! git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            git tag -a "$TAG" -m "$TAG"
           fi
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          ACTUAL="v$(node -p "require('./package.json').version")"
+          if [ "$ACTUAL" != "$TAG" ]; then
+            echo "package.json says $ACTUAL but the plan was $TAG" >&2
+            exit 1
+          fi
 
       - name: Build package
         run: npm run build
@@ -117,68 +234,61 @@ jobs:
       - name: Verify package contents
         run: npm pack --dry-run 2>&1 | tee /tmp/pack-output.txt
 
-      - name: Push version commit and tag
-        if: ${{ inputs.dry-run == false && inputs.bump != 'none' }}
-        run: |
-          git push origin HEAD
-          git push origin ${{ steps.version.outputs.version }}
-
       - name: Publish to npm
-        if: ${{ inputs.dry-run == false }}
-        env:
-          # Fallback only. When Trusted Publishing is configured for the
-          # package, npm authenticates over OIDC and ignores this.
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        if: needs.plan.outputs.publish == 'true' && env.DRY_RUN != 'true'
         run: |
-          # Trusted Publishing needs npm 11.5.1+; the runner's bundled npm
-          # can be older, and an old npm silently falls back to the token.
-          npm install -g npm@latest
+          # Trusted Publishing needs npm 11.5.1 or newer.
+          if [ "$(printf '%s\n' 11.5.1 "$(npm --version)" | sort -V | head -1)" != 11.5.1 ]; then
+            npm install -g npm@^11.5.1
+          fi
           echo "npm $(npm --version)"
 
-          if npm publish --provenance --access public; then
+          if npm publish --provenance --access public 2>&1 | tee /tmp/publish.log; then
             exit 0
           fi
 
           echo ""
           echo "──────────────────────────────────────────────────────────────"
-          echo "npm publish failed."
-          echo ""
-          echo "A 404 on PUT means the credential cannot publish this package."
-          echo "npm returns 404 rather than 403 so it does not leak whether a"
-          echo "package exists, so this is an auth problem, not a missing package."
-          echo ""
-          echo "Durable fix — Trusted Publishing (no token, works with 2FA):"
-          echo "  1. npmjs.com -> healwright -> Settings -> Trusted Publisher"
-          echo "  2. Publisher:  GitHub Actions"
-          echo "     Repository: ${{ github.repository }}"
-          echo "     Workflow:   release.yml"
-          echo "  3. Re-run this workflow with bump: none"
-          echo ""
-          echo "Stopgap — rotate the token:"
-          echo "  Create a Granular Access Token with read+write on healwright,"
-          echo "  then: gh secret set NPM_TOKEN"
+          if grep -q "E404\|E401\|E403\|ENEEDAUTH" /tmp/publish.log; then
+            echo "npm refused the credentials. Nothing was pushed, so this run"
+            echo "can simply be re-run once publishing is authorised."
+            echo ""
+            echo "One-time fix, by a package owner (Trusted Publishing, no token):"
+            echo "  npm login"
+            echo "  npm trust github healwright --file release.yml --repository ${{ github.repository }} --allow-publish"
+          else
+            echo "npm publish failed (see the log above). Nothing was pushed,"
+            echo "so this run can simply be re-run."
+          fi
           echo "──────────────────────────────────────────────────────────────"
           exit 1
 
+      - name: Push version commit and tag
+        if: env.DRY_RUN != 'true'
+        run: |
+          if [ "$BUMP" != none ]; then
+            git push origin "HEAD:$BRANCH"
+          fi
+          if ! git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
+            git push origin "$TAG"
+          fi
+
       - name: Create GitHub Release
-        if: ${{ inputs.dry-run == false }}
+        if: env.DRY_RUN != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          NUMBER="${VERSION#v}"
-
-          # Prefer the hand-written CHANGELOG section for this version; fall
-          # back to commit subjects if there isn't one.
-          awk -v ver="$NUMBER" '
+          # The hand-written CHANGELOG section for this version, or commit
+          # subjects when there isn't one.
+          awk -v ver="$VERSION" '
             $0 ~ "^## \\[" ver "\\]" { found = 1; next }
             found && /^## \[/ { exit }
             found { print }
           ' CHANGELOG.md > /tmp/notes.md
 
           if [ ! -s /tmp/notes.md ]; then
-            echo "No CHANGELOG entry for $NUMBER — falling back to commit log."
-            PREV_TAG=$(git tag --sort=-v:refname | grep -v "$VERSION" | head -1)
+            echo "No CHANGELOG entry for $VERSION; using the commit log."
+            PREV_TAG=$(git tag --sort=-v:refname | grep -v "^$TAG$" | head -1)
             {
               echo "## What's Changed"
               echo ""
@@ -195,34 +305,26 @@ jobs:
             echo ""
             echo "---"
             echo ""
-            echo "**Install:** \`npm install healwright@${NUMBER}\`"
+            echo "**Install:** \`npm install healwright@${VERSION}\` plus the SDK for your provider."
           } >> /tmp/notes.md
 
-          if gh release view "$VERSION" >/dev/null 2>&1; then
-            echo "Release $VERSION already exists — leaving its notes untouched."
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; leaving its notes untouched."
           else
-            gh release create "$VERSION" \
-              --title "$VERSION" \
-              --notes-file /tmp/notes.md \
-              --verify-tag
+            gh release create "$TAG" --title "$TAG" --notes-file /tmp/notes.md --verify-tag
           fi
 
-          echo "### 🚀 Released $VERSION" >> "$GITHUB_STEP_SUMMARY"
-          gh release view "$VERSION" --json url --jq .url >> "$GITHUB_STEP_SUMMARY"
+          echo "### 🚀 Released $TAG" >> "$GITHUB_STEP_SUMMARY"
+          gh release view "$TAG" --json url --jq .url >> "$GITHUB_STEP_SUMMARY"
 
       - name: Dry-run summary
-        if: ${{ inputs.dry-run == true }}
+        if: env.DRY_RUN == 'true'
         run: |
-          echo "### 🏜️ Dry run complete" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Version would be: **${{ steps.version.outputs.version }}**" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Package contents:" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          cat /tmp/pack-output.txt >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          # Reset the version bump so it doesn't affect future runs
-          if [ "${{ inputs.bump }}" != "none" ]; then
-            git reset --hard HEAD~1
-            git tag -d ${{ steps.version.outputs.version }} || true
-          fi
+          {
+            echo "### 🏜️ Dry run: would release $TAG"
+            echo ""
+            echo "Package contents:"
+            echo '```'
+            cat /tmp/pack-output.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

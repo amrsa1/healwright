@@ -453,6 +453,14 @@ npm run test:offline   # real-browser tests with a scripted provider, no API key
 SELF_HEAL=1 npm test   # end-to-end tests, needs an API key
 ```
 
+### Releasing
+
+Releases follow the version in `package.json`. Bump it in your pull request (`npm version minor
+--no-git-tag-version`) and add a matching `## [x.y.z]` section to `CHANGELOG.md`; when the pull
+request merges, the Release workflow runs the checks, publishes to npm with provenance, tags the
+commit and creates the GitHub Release from that section. You can also run the workflow by hand with
+a patch, minor or major bump. A failed run can be re-run: it skips whatever is already done.
+
 Issues and pull requests are welcome on
 [GitHub](https://github.com/amrsa1/healwright/issues). If healwright saves you a broken build, a
 star on the repo helps other people find it.
