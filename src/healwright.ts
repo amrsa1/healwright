@@ -152,6 +152,8 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     tokenUsage: TokenUsage | null;
     /** DOM indices of the elements the model was shown. */
     shown: number[];
+    /** The provider's explanation of its answer, if it gave one. */
+    note?: string;
   }
 
   async function askAI(action: Action, contextName: string): Promise<AskAIResult> {
@@ -176,7 +178,7 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     );
 
     const shown = candidates.map(c => allCandidates.indexOf(c));
-    return { plan: result.plan, candidatesAnalyzed: candidates.length, tokenUsage: result.tokenUsage, shown };
+    return { plan: result.plan, candidatesAnalyzed: candidates.length, tokenUsage: result.tokenUsage, shown, note: result.note };
   }
 
   interface PickResult {
@@ -335,8 +337,9 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     const ts = new Date().toISOString();
     const url = redactUrl(page.url());
     const key = cacheKey(page, action, contextName);
+    let note: string | undefined;
     const errorContext = (candidatesAnalyzed: number, strategiesTried: Array<{ type: string; reason: string }>) => ({
-      action, contextName, url, candidatesAnalyzed, strategiesTried, originalError: originalError?.message,
+      action, contextName, url, candidatesAnalyzed, strategiesTried, originalError: originalError?.message, aiResponse: note,
     });
 
     // 1. The cache.
@@ -382,6 +385,7 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
       const ai = await askAI(job.aiAction, contextName);
       candidatesAnalyzed = ai.candidatesAnalyzed;
       tokenUsage = ai.tokenUsage;
+      note = ai.note;
 
       if (!ai.plan) {
         await log({ ts, url, key, action, contextName, used: "healed", success: false, error: "AI returned no plan", tokenUsage });
@@ -401,7 +405,7 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
         await log({
           ts, url, key, action, contextName, used: "healed", success: false,
           error: low ? "Below minConfidence" : "No valid candidate",
-          confidence: low?.confidence, tokenUsage,
+          confidence: low?.confidence, note, tokenUsage,
         });
         recordHealEvent({
           outcome: low ? "belowConfidence" : "failed", action, contextName, url,

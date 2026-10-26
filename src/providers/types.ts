@@ -55,6 +55,8 @@ export interface TokenUsage {
 export interface HealPlanResult {
     plan: HealPlanT | null;
     tokenUsage: TokenUsage | null;
+    /** The provider's own explanation of its answer, shown when healing fails. */
+    note?: string;
 }
 
 export interface AIProvider {

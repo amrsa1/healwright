@@ -91,6 +91,10 @@ export class HealError extends Error {
       lines.push(`     • Original error: ${ctx.originalError}`);
     }
 
+    if (ctx.aiResponse) {
+      lines.push(`     • Model: ${ctx.aiResponse}`);
+    }
+
     if (ctx.strategiesTried.length > 0) {
       lines.push(``, `  🔬 Strategies tried:`);
       ctx.strategiesTried.forEach((s, i) => {

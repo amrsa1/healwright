@@ -377,3 +377,16 @@ describe('one pipeline for actions and getLocator', () => {
     expect(provider.generateHealPlan).not.toHaveBeenCalled();
   });
 });
+
+describe('provider notes', () => {
+  it("shows the provider's own explanation when nothing could be healed", async () => {
+    const { page } = createFakePage();
+    const provider = {
+      name: 'typesafe' as const,
+      generateHealPlan: vi.fn(async () => ({ plan: { candidates: [] }, tokenUsage: null, note: 'no confident match (none 0.53, present 0.38)' })),
+    };
+    const healPage = withHealing(page, { enabled: true, aiProvider: provider as any, ...paths() });
+
+    await expect(healPage.heal.click('#gone', 'Image submit input')).rejects.toThrow(/Model: no confident match \(none 0\.53, present 0\.38\)/);
+  });
+});

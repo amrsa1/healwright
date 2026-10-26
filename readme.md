@@ -262,7 +262,9 @@ TYPESAFE_API_KEY=...
 On healwright's element suite (76 deliberately broken locators across buttons, links, inputs,
 checkboxes, ARIA widgets and hidden controls), Jev healed all 76. A heal costs about $0.0001, and
 the API round trip with 40 candidates took under a quarter of a second. When a description matches
-nothing on the page, Jev says so instead of guessing, so describe elements by what's actually there.
+nothing on the page, Jev says so instead of guessing, and the error shows its best guess with the
+scores, so a description that doesn't match the page is easy to spot. Describe elements by what's
+actually there.
 
 ### Custom endpoints and your own provider
 

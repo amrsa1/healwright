@@ -5,6 +5,7 @@ import {
   strategiesFor,
   buildTypeSafeRequest,
   planFromAnswers,
+  declineNote,
   TypeSafeProvider,
 } from '../src/providers/typesafe';
 import { createAIProvider, resolveApiKey, DEFAULT_MODELS } from '../src/providers';
@@ -154,5 +155,17 @@ describe('provider wiring', () => {
     expect(resolveApiKey('typesafe', undefined, { AI_API_KEY: 'only' })).toBe('only');
     expect(resolveApiKey('openai', undefined, env)).toBe('openai-key');
     expect(resolveApiKey('typesafe', 'explicit', env)).toBe('explicit');
+  });
+});
+
+describe('declineNote', () => {
+  it("explains a decline with Jev's best guess and its scores", () => {
+    const answers = {
+      element: { type: 'choice' as const, choice: 'none', confidence: 0.5, probabilities: { e1: 0.44, e2: 0.03, e3: 0, none: 0.53 } },
+      present: { type: 'noul' as const, noul: 0.38 },
+    };
+    expect(declineNote(heal.candidates, ['e1', 'e2', 'e3'], answers)).toBe(
+      'no confident match (none 0.53, present 0.38); best guess 0.44: button, text "Place order", test id "place-order", class "btn btn-primary"',
+    );
   });
 });

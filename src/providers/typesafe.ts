@@ -199,6 +199,21 @@ export function planFromAnswers(candidates: Candidate[], labels: string[], answe
     return plan;
 }
 
+/**
+ * Why nothing was healed, in Jev's own numbers. A description that is half
+ * right ("alt Go" when the alt is "Image Submit") leaves Jev torn between an
+ * element and "none"; showing its best guess makes the mismatch obvious.
+ */
+export function declineNote(candidates: Candidate[], labels: string[], answers: TypeSafeAnswers): string {
+    const { element, present } = answers;
+    const best = labels
+        .map((label, i) => ({ candidate: candidates[i], p: element.probabilities[label] ?? 0 }))
+        .sort((a, b) => b.p - a.p)[0];
+    const none = element.probabilities[NONE] ?? 0;
+    const head = `no confident match (none ${none.toFixed(2)}, present ${present.noul.toFixed(2)})`;
+    return best ? `${head}; best guess ${best.p.toFixed(2)}: ${describeCandidate(best.candidate)}` : head;
+}
+
 /** Client options: a bounded request, with retries left to healwright. */
 export function typeSafeClientOptions(config: Pick<AIProviderConfig, "apiKey" | "baseURL">) {
     return {
@@ -238,8 +253,10 @@ export class TypeSafeProvider implements AIProvider {
             const outputTokens = resp.usage?.output_tokens ?? 0;
             const tokenUsage = { inputTokens, outputTokens, totalTokens: inputTokens + outputTokens };
 
-            const plan = planFromAnswers(heal.candidates, labels, resp.answers as unknown as TypeSafeAnswers);
-            return { plan, tokenUsage };
+            const answers = resp.answers as unknown as TypeSafeAnswers;
+            const plan = planFromAnswers(heal.candidates, labels, answers);
+            const note = plan.candidates.length ? undefined : declineNote(heal.candidates, labels, answers);
+            return { plan, tokenUsage, note };
         } catch (aiErr: any) {
             healLog.candidateError("api", aiErr?.message ?? String(aiErr));
             throw aiErr;

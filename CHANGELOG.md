@@ -22,6 +22,8 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Elements inside open shadow roots are collected as candidates, so web components can be healed.
 - `npm run test:offline`: real-browser tests with a scripted provider that need no API key. CI runs
   them on every push.
+- Providers can explain a failed heal (`HealPlanResult.note`), and the `HealError` prints it. When
+  TypeSafe declines, the error shows Jev's best guess and its scores.
 
 ### Fixed
 
