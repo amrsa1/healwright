@@ -864,11 +864,11 @@
     const C = (s) => `<span class="tk-c">${esc(s)}</span>`;
     const kv = (k, v) => `<span class="e-k">${k}</span>=<span class="e-v">${esc(v)}</span>`;
     const ENV = {
-      openai: [C("# .env"), kv("SELF_HEAL", "1"), kv("AI_PROVIDER", "openai"), kv("AI_API_KEY", "sk-…"), C("# AI_MODEL=…  optional")],
-      anthropic: [C("# .env"), kv("SELF_HEAL", "1"), kv("AI_PROVIDER", "anthropic"), kv("AI_API_KEY", "sk-ant-…"), C("# AI_MODEL=…  optional")],
-      google: [C("# .env"), kv("SELF_HEAL", "1"), kv("AI_PROVIDER", "google"), kv("AI_API_KEY", "…"), C("# AI_MODEL=…  optional")],
-      typesafe: [C("# .env"), kv("SELF_HEAL", "1"), kv("AI_PROVIDER", "typesafe"), kv("TYPESAFE_API_KEY", "…"), C("# Jev picks one of the elements"), C("# on the page; it never writes"), C("# a selector of its own.")],
-      local: [C("# .env"), kv("SELF_HEAL", "1"), kv("AI_PROVIDER", "local"), kv("OLLAMA_HOST", "http://127.0.0.1:11434"), C("# No API key. Nothing leaves"), C("# your machine.")],
+      openai: [C("# npm install openai"), "", C("# .env"), kv("SELF_HEAL", "1"), kv("AI_PROVIDER", "openai"), kv("AI_API_KEY", "sk-…"), C("# AI_MODEL=…  optional")],
+      anthropic: [C("# npm install @anthropic-ai/sdk"), "", C("# .env"), kv("SELF_HEAL", "1"), kv("AI_PROVIDER", "anthropic"), kv("AI_API_KEY", "sk-ant-…"), C("# AI_MODEL=…  optional")],
+      google: [C("# npm install @google/genai"), "", C("# .env"), kv("SELF_HEAL", "1"), kv("AI_PROVIDER", "google"), kv("AI_API_KEY", "…"), C("# AI_MODEL=…  optional")],
+      typesafe: [C("# npm install @typesafe-ai/sdk"), "", C("# .env"), kv("SELF_HEAL", "1"), kv("AI_PROVIDER", "typesafe"), kv("TYPESAFE_API_KEY", "…"), C("# Jev picks one of the elements"), C("# on the page; it never writes"), C("# a selector of its own.")],
+      local: [C("# npm install ollama"), "", C("# .env"), kv("SELF_HEAL", "1"), kv("AI_PROVIDER", "local"), kv("OLLAMA_HOST", "http://127.0.0.1:11434"), C("# No API key. Nothing leaves"), C("# your machine.")],
       custom: [
         C("// fixtures.ts"),
         `<span class="tk-f">createHealingFixture</span>({`,

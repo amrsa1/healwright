@@ -2296,6 +2296,10 @@ h3 code {
   font-size: 15px;
 }
 
+.gstep .install+.note {
+  margin-top: 16px;
+}
+
 .codeblock {
   margin: 0 0 18px;
   border-radius: 14px;

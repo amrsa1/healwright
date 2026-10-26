@@ -5,6 +5,12 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Breaking
+
+- Provider SDKs are optional peer dependencies. Install the one you use alongside healwright, for
+  example `npm install healwright openai`. A missing SDK fails the first heal with the exact command
+  to run. Installs no longer pull in all five SDKs. Release this as a major version.
+
 ### Added
 
 - TypeSafe Jev provider (`AI_PROVIDER=typesafe` or `jev`, key in `TYPESAFE_API_KEY`). Jev chooses
@@ -13,6 +19,9 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   probability is the heal's confidence.
 - `GenerateHealPlanInput.heal` passes the request as structured data to custom providers, alongside
   the prompt.
+- Elements inside open shadow roots are collected as candidates, so web components can be healed.
+- `npm run test:offline`: real-browser tests with a scripted provider that need no API key. CI runs
+  them on every push.
 
 ### Fixed
 
@@ -38,6 +47,14 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   session tokens.
 - `heal.check()` and `heal.uncheck()` search custom checkboxes and switches (`role="checkbox"`,
   `role="switch"`, labels), not only text inputs.
+- Healing only starts when the locator is broken. If the element was found but the action failed
+  (disabled, covered), the real error is thrown instead of healing onto a different element. A
+  selector that now matches the wrong kind of element (filling a `<div>`) still heals.
+- A healed locator must resolve to an element the model was shown, or to one inside it. A made-up
+  selector that happens to match something else is rejected.
+- Cache entries are shared across records: ids in the path (`/orders/123`) become `:id` in the key.
+- `heal.getLocator()` runs the same pipeline as the actions, so it now logs cache hits and failures
+  and reports provider errors as a counted `HealError`. Failed heals are logged once, not twice.
 
 ### Changed
 

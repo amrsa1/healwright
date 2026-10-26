@@ -48,13 +48,14 @@ failing the build, and tells you exactly what it changed.
 
 ## Quick start
 
-**1. Install**
+**1. Install** healwright with the SDK for your provider (OpenAI is the default):
 
 ```bash
-npm install healwright
+npm install healwright openai
 ```
 
-Requires `@playwright/test` 1.62 or newer.
+Requires Node.js 22 and `@playwright/test` 1.62 or newer. Each provider's SDK is an optional peer
+dependency, so you only install the one you use; the table under [Providers](#providers) lists them.
 
 **2. Pick a provider.** Healing stays off until `SELF_HEAL=1`, so your suite behaves exactly as
 before until you turn it on. Set these in CI, or in a `.env` file loaded with
@@ -231,13 +232,16 @@ await healPage.heal.click('#buy-now', 'Place order button');
 
 ## Providers
 
-| Provider | `AI_PROVIDER` | What it needs |
-|----------|---------------|---------------|
-| OpenAI (default) | `openai` or `gpt` | `AI_API_KEY` |
-| Anthropic Claude | `anthropic` or `claude` | `AI_API_KEY` |
-| Google Gemini | `google` or `gemini` | `AI_API_KEY` |
-| TypeSafe Jev | `typesafe` or `jev` | `TYPESAFE_API_KEY` (or `AI_API_KEY`) |
-| Ollama, local | `local` or `ollama` | Ollama running; no key |
+| Provider | `AI_PROVIDER` | Install | What it needs |
+|----------|---------------|---------|---------------|
+| OpenAI (default) | `openai` or `gpt` | `npm install openai` | `AI_API_KEY` |
+| Anthropic Claude | `anthropic` or `claude` | `npm install @anthropic-ai/sdk` | `AI_API_KEY` |
+| Google Gemini | `google` or `gemini` | `npm install @google/genai` | `AI_API_KEY` |
+| TypeSafe Jev | `typesafe` or `jev` | `npm install @typesafe-ai/sdk` | `TYPESAFE_API_KEY` (or `AI_API_KEY`) |
+| Ollama, local | `local` or `ollama` | `npm install ollama` | Ollama running; no key |
+
+If the SDK for your provider isn't installed, the first heal fails with the exact `npm install`
+command to run.
 
 Each provider has a default model. Set `AI_MODEL` to choose your own.
 
@@ -408,7 +412,8 @@ can:
 - Cloud providers need an API key and network access; a local model needs neither.
 - A heal adds model latency, usually 1 to 2 seconds with a cloud model and more on slow local
   hardware.
-- Only the main frame is searched. Elements inside iframes or shadow DOM aren't candidates yet.
+- Only the main frame is searched, so elements inside iframes aren't candidates yet. Open shadow
+  roots are searched.
 - `force: true` clicks dispatch the event directly, without pointer coordinates.
 - The cache is shared across parallel workers through a lock file. It's best effort, not a
   database.
@@ -437,6 +442,7 @@ description-only test with no selector at all. There's also a
 npm install
 npm run typecheck && npm run lint && npm run test:unit
 npm run build
+npm run test:offline   # real-browser tests with a scripted provider, no API key
 SELF_HEAL=1 npm test   # end-to-end tests, needs an API key
 ```
 

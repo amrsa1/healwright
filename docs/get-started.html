@@ -92,12 +92,16 @@
                 <!-- 1 -->
                 <section class="gstep" id="install">
                     <h2><span class="gstep-n" aria-hidden="true">1</span>Install</h2>
-                    <p>Add healwright to the project that holds your Playwright tests.</p>
-                    <button class="install" type="button" data-copy="npm install healwright">
+                    <p>Add healwright to the project that holds your Playwright tests, with the SDK for your
+                        provider. OpenAI is the default.</p>
+                    <button class="install" type="button" data-copy="npm install healwright openai">
                         <span class="install-prompt" aria-hidden="true">$</span>
-                        <code>npm install healwright</code>
+                        <code>npm install healwright openai</code>
                         <span class="install-state" aria-live="polite">Copy</span>
                     </button>
+                    <p class="note">Using another provider? Install its SDK instead: <code>@anthropic-ai/sdk</code>,
+                        <code>@google/genai</code>, <code>@typesafe-ai/sdk</code> or <code>ollama</code>. If it's
+                        missing, the first heal tells you the exact command to run.</p>
                 </section>
 
                 <!-- 2 -->
