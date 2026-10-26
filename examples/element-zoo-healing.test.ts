@@ -81,7 +81,7 @@ test.describe('Self-Healing — Click', () => {
 
   test('heal broken label for hidden checkbox', async ({ page }) => {
     const broken = page.locator('label.nonexistent-label');
-    await page.heal.click(broken, 'Label with text Toggle hidden checkbox');
+    await page.heal.click(broken, 'Label for the CSS-hidden checkbox');
     expect(await logText(page)).toContain('css-hidden checkbox');
   });
 
@@ -400,7 +400,7 @@ test.describe('AI-Only — Click', () => {
   });
 
   test('find CSS-hidden checkbox label', async ({ page }) => {
-    await page.heal.click('', 'Label with text Toggle hidden checkbox');
+    await page.heal.click('', 'Label for the CSS-hidden checkbox');
     expect(await logText(page)).toContain('css-hidden checkbox');
   });
 

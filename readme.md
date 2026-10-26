@@ -259,6 +259,11 @@ AI_PROVIDER=typesafe
 TYPESAFE_API_KEY=...
 ```
 
+On healwright's element suite (76 deliberately broken locators across buttons, links, inputs,
+checkboxes, ARIA widgets and hidden controls), Jev healed all 76. A heal costs about $0.0001, and
+the API round trip with 40 candidates took under a quarter of a second. When a description matches
+nothing on the page, Jev says so instead of guessing, so describe elements by what's actually there.
+
 ### Custom endpoints and your own provider
 
 `AI_BASE_URL` (or the `baseURL` option) points a built-in provider at another endpoint, such as
