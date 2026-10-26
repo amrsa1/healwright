@@ -57,7 +57,7 @@ test.describe('Self-Healing — Click', () => {
 
   test('heal broken image input locator', async ({ page }) => {
     const broken = page.locator('input[alt="Wrong Alt"]');
-    await page.heal.click(broken, 'Image submit input with alt Go');
+    await page.heal.click(broken, 'Image submit input with alt Image Submit');
     expect(await logText(page)).toBe('image-input clicked');
   });
 
