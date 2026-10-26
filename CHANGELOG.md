@@ -3,13 +3,27 @@
 All notable changes to healwright are documented here.
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.0.0] - 2026-10-26
+
+Healing that is harder to fool: it only starts when a locator is really broken, checks every answer
+against the page, and keeps report-only runs honest. This release also adds TypeSafe Jev as a
+provider, makes provider SDKs optional, and searches shadow DOM.
+
+### Upgrading from 1.x
+
+1. Install the SDK for your provider next to healwright: `openai` (the default),
+   `@anthropic-ai/sdk`, `@google/genai`, `@typesafe-ai/sdk` or `ollama`. For example,
+   `npm install healwright openai`.
+2. Use Node.js 22 or newer.
+3. If a test now fails with a "disabled" or "covered" error, that is the real problem surfacing.
+   Healwright no longer heals onto a different element when the one it found can't be used.
 
 ### Breaking
 
-- Provider SDKs are optional peer dependencies. Install the one you use alongside healwright, for
-  example `npm install healwright openai`. A missing SDK fails the first heal with the exact command
-  to run. Installs no longer pull in all five SDKs. Release this as a major version.
+- Provider SDKs are optional peer dependencies. Install the one you use alongside healwright. A
+  missing SDK fails the first heal with the exact command to run, and installs no longer pull in all
+  five SDKs.
+- Requires Node.js 22 or newer, which the current OpenAI and TypeSafe SDKs already need.
 
 ### Added
 
@@ -61,7 +75,6 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - Dependencies updated to their latest versions, including `@anthropic-ai/sdk` 1.x, `vitest` 5 and `tsup` 9.
-- Requires Node.js 22 or newer, which the current OpenAI SDK already needs.
 
 ### Docs
 
