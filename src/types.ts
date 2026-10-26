@@ -5,7 +5,7 @@
 import { z } from "zod";
 import type { Page, Locator } from "playwright-core";
 import { strictJsonSchema, type JsonSchemaObject } from "./jsonSchema";
-import type { AIProvider } from "./providers/types";
+import type { AIProvider, ProviderName } from "./providers/types";
 
 export type Action =
   | "click"
@@ -201,7 +201,7 @@ export interface HealOptions {
   enabled?: boolean;
   /** `heal` (default), `warn` (report only), or `off`. Env: `HEALWRIGHT_MODE`. */
   mode?: HealMode;
-  provider?: "openai" | "gpt" | "anthropic" | "claude" | "google" | "gemini" | "local" | "ollama";
+  provider?: ProviderName;
   /**
    * Use your own provider implementation instead of the built-in clients —
    * any model reachable from Node, including ones healwright has no client for.
@@ -210,6 +210,7 @@ export interface HealOptions {
   model?: string;
   /** Override the provider API endpoint (Azure, OpenRouter, vLLM, a gateway…). Env: `AI_BASE_URL`. */
   baseURL?: string;
+  /** Defaults to `AI_API_KEY`; for TypeSafe, `TYPESAFE_API_KEY` is read first. */
   apiKey?: string;
   cacheFile?: string;
   reportFile?: string;

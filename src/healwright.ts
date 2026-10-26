@@ -5,7 +5,7 @@
 import type { Page, Locator } from "playwright-core";
 import path from "node:path";
 
-import { createAIProvider, AIProvider, ProviderName, TokenUsage } from "./providers";
+import { createAIProvider, resolveApiKey, AIProvider, ProviderName, TokenUsage } from "./providers";
 
 import { healLog } from "./logger";
 import { buildSystemPrompt, buildUserContent } from "./prompt";
@@ -78,8 +78,8 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
   const mode: HealMode = opts?.mode ?? (process.env.HEALWRIGHT_MODE as HealMode | undefined) ?? "heal";
   const envEnabled = process.env.SELF_HEAL === "1" || process.env.AI_SELF_HEAL === "true";
   const enabled = mode === "off" ? false : (opts?.enabled ?? envEnabled);
-  const apiKey = opts?.apiKey ?? process.env.AI_API_KEY;
   const providerName = (opts?.provider ?? process.env.AI_PROVIDER?.toLowerCase() ?? "openai") as ProviderName;
+  const apiKey = resolveApiKey(providerName, opts?.apiKey, process.env);
   const model = opts?.model ?? process.env.AI_MODEL;
   const baseURL = opts?.baseURL ?? process.env.AI_BASE_URL;
   const isLocalProvider = providerName === "local" || providerName === "ollama";
@@ -159,11 +159,13 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     const candidates = rankCandidates(allCandidates, contextName, maxCandidates);
     healLog.askingAI(contextName, candidates.length, allCandidates.length);
 
+    const url = redactUrl(page.url());
     const result = await withRetry(
       () => aiProvider!.generateHealPlan({
         systemPrompt: buildSystemPrompt(),
-        userContent: buildUserContent(redactUrl(page.url()), action, contextName, candidates),
+        userContent: buildUserContent(url, action, contextName, candidates),
         jsonSchema: healPlanJsonSchema,
+        heal: { url, action, contextName, candidates },
       }),
       2, // 2 retries (3 total attempts)
       1000,

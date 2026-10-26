@@ -6,6 +6,7 @@
  * - Anthropic Claude
  * - Google Gemini
  * - Local models via Ollama
+ * - TypeSafe Jev
  */
 
 export { withHealing, createHealingFixture } from './healwright';
@@ -23,7 +24,7 @@ export type {
   Action,
 } from './types';
 export { HealError } from './types';
-export type { ProviderName, AIProvider, AIProviderConfig, GenerateHealPlanInput, HealPlanResult, TokenUsage } from './providers';
+export type { ProviderName, AIProvider, AIProviderConfig, GenerateHealPlanInput, HealRequest, HealPlanResult, TokenUsage } from './providers';
 export { DEFAULT_MODELS } from './providers';
 export { getHealSummary, resetHealSummary } from './summary';
 export type { HealSummary, HealSummaryEntry, HealOutcome } from './summary';

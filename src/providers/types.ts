@@ -8,7 +8,12 @@ import { HealPlanT } from "../types";
 export { strictJsonSchema } from "../jsonSchema";
 export type { JsonSchemaObject } from "../jsonSchema";
 
-export type ProviderName = "openai" | "gpt" | "anthropic" | "claude" | "google" | "gemini" | "local" | "ollama";
+export type ProviderName =
+    | "openai" | "gpt"
+    | "anthropic" | "claude"
+    | "google" | "gemini"
+    | "local" | "ollama"
+    | "typesafe" | "jev";
 
 export interface AIProviderConfig {
     apiKey: string;
@@ -25,10 +30,20 @@ export function isReasoningModel(model: string): boolean {
     return /^(gpt-5|o[1-9])/i.test(model.trim());
 }
 
+/** What healing needs answered, as data rather than a prompt. */
+export interface HealRequest {
+    url: string;
+    action: string;
+    contextName: string;
+    candidates: Record<string, unknown>[];
+}
+
 export interface GenerateHealPlanInput {
     systemPrompt: string;
     userContent: string;
     jsonSchema: object;
+    /** The same request as structured data, for providers that don't take a prompt. */
+    heal?: HealRequest;
 }
 
 export interface TokenUsage {
@@ -130,4 +145,6 @@ export const DEFAULT_MODELS: Record<ProviderName, string> = {
     gemini: "gemini-2.5-flash",
     local: "gemma3:4b",
     ollama: "gemma3:4b",
+    typesafe: "jev-latest",
+    jev: "jev-latest",
 };
