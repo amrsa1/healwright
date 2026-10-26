@@ -92,6 +92,16 @@ export async function waitForReady(loc: Locator, _action: string, timeout: numbe
 }
 
 /**
+ * True for Playwright's errors about acting on the wrong kind of element,
+ * such as filling a <div> or checking a button. When an existing selector
+ * starts matching a different element type, the locator is what broke.
+ */
+export function isWrongElementError(err: unknown): boolean {
+  const msg = String((err as { message?: unknown })?.message ?? err);
+  return /Element is not an? </.test(msg) || msg.includes("Not a checkbox or radio button");
+}
+
+/**
  * Wait for page to stabilize after navigation
  */
 export async function waitForStable(page: Page): Promise<void> {

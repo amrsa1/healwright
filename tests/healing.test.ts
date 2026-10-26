@@ -250,3 +250,44 @@ describe('check and uncheck', () => {
     expect(evaluateArgs[0].selector).toContain("[role='switch']");
   });
 });
+
+describe('when healing starts', () => {
+  it('does not heal when the element was found but the action failed', async () => {
+    const { page, calls } = createFakePage({
+      present: ['button.buy', 'role=button[name=Buy]'],
+      actionErrors: { 'button.buy': 'locator.click: Timeout 5000ms exceeded.\n  - element is not enabled' },
+    });
+    const { provider } = createFakeProvider(planFor({ type: 'role', role: 'button', name: 'Buy' }));
+    const healPage = withHealing(page, { enabled: true, aiProvider: provider as any, ...paths() });
+
+    await expect(healPage.heal.click('button.buy', 'Buy button')).rejects.toThrow(/not enabled/);
+
+    expect(provider.generateHealPlan).not.toHaveBeenCalled();
+    expect(calls.some(c => c.action === 'click')).toBe(false);
+    expect(getHealSummary().total).toBe(0);
+  });
+
+  it('heals when the selector now matches the wrong kind of element', async () => {
+    const { page, calls } = createFakePage({
+      present: ['#email', 'label=Email'],
+      actionErrors: { '#email': 'Error: Element is not an <input>, <textarea> or [contenteditable] element' },
+    });
+    const { provider } = createFakeProvider(planFor({ type: 'label', text: 'Email' }));
+    const healPage = withHealing(page, { enabled: true, aiProvider: provider as any, ...paths() });
+
+    await healPage.heal.fill('#email', 'Email field', 'a@b.c');
+
+    expect(calls.some(c => c.action === 'fill' && c.selector === 'label=Email')).toBe(true);
+  });
+
+  it('clicks a hover-only control through a working selector without healing', async () => {
+    const { page, calls } = createFakePage({ hidden: ['button.destroy'] });
+    const { provider } = createFakeProvider(planFor({ type: 'css', selector: 'button.destroy' }));
+    const healPage = withHealing(page, { enabled: true, aiProvider: provider as any, ...paths() });
+
+    await healPage.heal.click('button.destroy', 'Delete button', { force: true });
+
+    expect(calls.some(c => c.action === 'dispatchEvent' && c.selector === 'button.destroy')).toBe(true);
+    expect(provider.generateHealPlan).not.toHaveBeenCalled();
+  });
+});

@@ -32,6 +32,7 @@ import {
   validateStrategy,
   waitForReady,
   waitForStable,
+  isWrongElementError,
   collectCandidates,
   rankCandidates,
   readJson,
@@ -307,13 +308,25 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
 
     // Try original locator first
     if (!aiOnlyMode) {
+      let located = false;
       try {
         const originalLoc = toLocator(page, target);
-        await waitForReady(originalLoc, action, quickTimeout);
+        if (options?.forceClick) {
+          // Hover-only controls are never visible; being in the page is enough.
+          await originalLoc.waitFor({ state: "attached", timeout: quickTimeout });
+        } else {
+          await waitForReady(originalLoc, action, quickTimeout);
+        }
+        located = true;
         await performAction(originalLoc);
         return;
       } catch (err: any) {
         if (!enabled) throw err;
+        // The element was found and the action itself failed: it's disabled,
+        // covered, or the page moved on. Healing would act on some other
+        // element and pass, so the real error stands. The exception is a
+        // selector that now matches the wrong kind of element.
+        if (located && !isWrongElementError(err)) throw err;
         originalError = err;
       }
     }
