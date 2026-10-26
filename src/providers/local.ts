@@ -5,10 +5,11 @@
  * Default model: gemma3:4b (3.3 GB, 128K context, excellent accuracy-to-size ratio)
  */
 
-import { Ollama } from "ollama";
+import type { Ollama } from "ollama";
 import { AIProvider, AIProviderConfig, GenerateHealPlanInput, HealPlanResult, DEFAULT_MODELS, cleanJson } from "./types";
 import { HealPlan } from "../types";
 import { healLog } from "../logger";
+import { loadSdk } from "./load";
 
 /**
  * Normalises common response shapes that small models produce.
@@ -67,21 +68,28 @@ function normalizeResponse(raw: any): any {
 
 export class LocalProvider implements AIProvider {
     readonly name = "local" as const;
-    private client: Ollama;
+    private client: Promise<Ollama> | null = null;
+    private host: string;
     private model: string;
 
     constructor(config: AIProviderConfig) {
-        const host = config.baseURL || config.apiKey || process.env.OLLAMA_HOST || "http://127.0.0.1:11434";
-        this.client = new Ollama({ host });
+        this.host = config.baseURL || config.apiKey || process.env.OLLAMA_HOST || "http://127.0.0.1:11434";
         this.model = config.model ?? DEFAULT_MODELS.local;
+    }
+
+    private getClient(): Promise<Ollama> {
+        this.client ??= loadSdk("ollama", "Ollama", () => import("ollama"))
+            .then(({ Ollama }) => new Ollama({ host: this.host }));
+        return this.client;
     }
 
     async generateHealPlan(input: GenerateHealPlanInput): Promise<HealPlanResult> {
         try {
+            const client = await this.getClient();
             // Build the Ollama format schema for structured output
             const formatSchema = input.jsonSchema ?? "json";
 
-            const resp = await this.client.chat({
+            const resp = await client.chat({
                 model: this.model,
                 messages: [
                     { role: "system", content: input.systemPrompt },

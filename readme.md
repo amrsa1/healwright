@@ -1,62 +1,73 @@
 <div align="center">
-  <img src="./docs/owl.png" alt="Healwright Logo" width="150" style="margin-bottom: 20px;"/>
-  
-  # Healwright
 
-  AI-powered self-healing locators for Playwright. When your selectors break, healwright figures out what you meant and finds the element anyway.
+<a href="https://amrsa1.github.io/healwright/">
+  <img src="https://raw.githubusercontent.com/amrsa1/healwright/main/docs/social.png" alt="Healwright: Your selector broke. Your test didn't. Self-healing locators for Playwright." width="100%">
+</a>
 
-  [![npm version](https://badge.fury.io/js/healwright.svg)](https://www.npmjs.com/package/healwright)
-  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+<br>
+<br>
+
+[![npm version](https://img.shields.io/npm/v/healwright?style=flat-square&color=27E1B2&labelColor=0A1230)](https://www.npmjs.com/package/healwright)
+[![npm downloads](https://img.shields.io/npm/dm/healwright?style=flat-square&color=4C8DFF&labelColor=0A1230)](https://www.npmjs.com/package/healwright)
+[![CI](https://img.shields.io/github/actions/workflow/status/amrsa1/healwright/ci.yml?branch=main&style=flat-square&label=CI&labelColor=0A1230)](https://github.com/amrsa1/healwright/actions/workflows/ci.yml)
+[![TypeScript types](https://img.shields.io/npm/types/healwright?style=flat-square&color=34487F&labelColor=0A1230)](https://www.npmjs.com/package/healwright)
+[![License: MIT](https://img.shields.io/npm/l/healwright?style=flat-square&color=97A6CF&labelColor=0A1230)](https://github.com/amrsa1/healwright/blob/main/LICENSE)
+
+**[Website](https://amrsa1.github.io/healwright/)** &nbsp;·&nbsp;
+**[Get started](https://amrsa1.github.io/healwright/get-started.html)** &nbsp;·&nbsp;
+**[Changelog](https://github.com/amrsa1/healwright/blob/main/CHANGELOG.md)** &nbsp;·&nbsp;
+**[Demo video](https://youtu.be/qyHSG0K99i4)**
+
 </div>
 
-## Why?
+# Self-healing locators for Playwright
 
-We've all been there. You write a solid test suite, everything passes, then the frontend team refactors something and half your locators break. You spend hours updating selectors instead of writing actual tests.
+When a Playwright locator stops matching, healwright asks an AI model which element you meant,
+checks the answer against the live page, and caches it. Your test keeps going, and the next run
+doesn't call the model at all.
 
-Healwright fixes this. It wraps your Playwright page with AI-powered healing that kicks in when locators fail. You can also skip selectors entirely and just describe what you're looking for in plain English.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/amrsa1/healwright/main/docs/demo.gif" alt="A redesign moves the Place order button and the selector stops matching. Healwright scans the page, verifies the best match, and stitches the test back onto the button." width="100%">
+</p>
 
-## Features
+## Why healwright
 
-- **Self-healing locators** - When a selector breaks, AI analyzes the page and finds the right element
-- **AI-only mode** - Just describe the element, no selector needed
-- **Multi-provider** - OpenAI, Anthropic, Google, or run locally with Ollama — your choice
-- **Local LLM support** - Run completely offline with Ollama. No API keys, no cloud, full privacy
-- **Caching** - Healed selectors are saved so you don't burn API calls on every run
-- **Drop-in** - Works with your existing Playwright setup
+A frontend refactor renames a class or moves a button, and half your selectors stop matching. The
+app still works; the tests don't. Healwright repairs the locator while the test runs instead of
+failing the build, and tells you exactly what it changed.
 
-## Installation
+- **Heals at runtime.** When a selector breaks, the model picks the element from a ranked list of
+  what's actually on the page.
+- **Verified, not guessed.** A suggestion is used only if it matches exactly one visible element
+  with enough confidence.
+- **Pays once.** Fixes are cached, so the model is called once per element, not once per run.
+- **Plain-English targets.** Leave the selector empty and describe the element instead.
+- **Honest in CI.** `minConfidence`, report-only mode and a run summary keep every heal visible.
+- **Any model.** OpenAI, Anthropic Claude, Google Gemini, TypeSafe Jev, or a local Ollama model
+  where nothing leaves your machine.
+
+## Quick start
+
+**1. Install** healwright with the SDK for your provider (OpenAI is the default):
 
 ```bash
-npm install healwright
+npm install healwright openai
 ```
 
-## Quick Start
+Requires Node.js 22 and `@playwright/test` 1.62 or newer. Each provider's SDK is an optional peer
+dependency, so you only install the one you use; the table under [Providers](#providers) lists them.
 
-Set your API key and enable healing:
+**2. Pick a provider.** Healing stays off until `SELF_HEAL=1`, so your suite behaves exactly as
+before until you turn it on. Set these in CI, or in a `.env` file loaded with
+`import 'dotenv/config'` at the top of `playwright.config.ts`:
 
 ```bash
-# OpenAI (default) - also accepts AI_PROVIDER=gpt
-export AI_API_KEY="your-openai-key"
-export SELF_HEAL=1
-
-# Anthropic Claude - also accepts AI_PROVIDER=claude
-export AI_PROVIDER=anthropic
-export AI_API_KEY="your-anthropic-key"
-export SELF_HEAL=1
-
-# Google Gemini - also accepts AI_PROVIDER=gemini  
-export AI_PROVIDER=google
-export AI_API_KEY="your-google-key"
-export SELF_HEAL=1
-
-# Local LLM via Ollama — no API key, no cloud, fully offline!
-export AI_PROVIDER=local
-export SELF_HEAL=1
-# Optional: pick a different model (default: gemma3:4b)
-# export AI_MODEL="mistral"
+SELF_HEAL=1
+AI_PROVIDER=openai     # or anthropic, google, typesafe, local
+AI_API_KEY=sk-...      # not needed for local (Ollama)
 ```
 
-Create a fixture:
+**3. Wrap the page fixture**
 
 ```typescript
 // fixtures.ts
@@ -67,177 +78,208 @@ export const test = base.extend<{ page: HealPage }>(createHealingFixture());
 export { expect } from '@playwright/test';
 ```
 
-Use it in your tests:
+**4. Write a test**
 
 ```typescript
 import { test, expect } from './fixtures';
 
-test('login flow', async ({ page }) => {
-  await page.goto('https://example.com');
-  
-  // If this selector breaks, AI will find the right element
-  await page.heal.click(
-    page.locator('[data-testid="submit-btn"]'),
-    'Submit button on form'
-  );
-  
-  // Or skip the selector entirely - just describe what you want
-  await page.heal.fill('', 'Email input field', 'user@example.com');
+test('customer can check out', async ({ page }) => {
+  await page.goto('https://shop.example/checkout');
+
+  // No selector: the description is enough
+  await page.heal.fill('', 'Email field', 'ada@example.com');
+
+  // The selector runs first; the description takes over if it breaks
+  await page.heal.click('#buy-now', 'Place order button');
+
+  await expect(page.getByText('Order confirmed')).toBeVisible();
 });
 ```
 
-## API
+Run `npx playwright test`. While your selectors match, nothing changes. When one breaks, the heal
+shows up in the output:
 
-### `withHealing(page)`
-
-Wraps a Playwright page with healing methods:
-
-```typescript
-import { withHealing } from 'healwright';
-
-const healPage = withHealing(page);
-await healPage.heal.click(locator, 'Button description');
+```text
+  ├─ ⚡ CLICK Place order button
+  │  ⬡ analyzing 14 elements... (filtered from 63)
+  │  ↳ received 412 chars
+  │
+  ├─ ✓ Place order button
+  │  → getByRole("button", { name: "Place order" })
+  │  ↑ 1180 input · 96 output · 1276 total tokens
+  └──────────────────────────────
 ```
 
-### `createHealingFixture()`
+The [step-by-step guide](https://amrsa1.github.io/healwright/get-started.html) covers the same
+ground for every provider.
 
-Creates a test fixture that automatically wraps the page:
+## How it heals
 
-```typescript
-import { test as base } from '@playwright/test';
-import { createHealingFixture, HealPage } from 'healwright';
+1. **Your locator runs first.** If the element shows up within `quickTimeout` (1 second), the
+   action runs and nothing else happens.
+2. **The cache is checked.** A fix found earlier for this element on this page path is tried next.
+3. **The page is narrowed down.** Up to 1,000 interactive elements are collected and scored against
+   your description. Only the best 40 are sent to the model, so the right one isn't lost to DOM
+   order.
+4. **The model suggests locators.** Up to three Playwright strategies (test id, role and name,
+   label, placeholder, text, alt text, title or CSS), each with a confidence score, as JSON that
+   has to match a fixed schema.
+5. **Every suggestion is checked.** It must match exactly one element, that element must be
+   visible, and its confidence must clear `minConfidence`.
+6. **The action runs and the fix is saved.** The working locator goes into
+   `.self-heal/healed_locators.json`, and the heal is logged to `.self-heal/heal_events.jsonl`
+   with the model's reason and token count.
 
-export const test = base.extend<{ page: HealPage }>(createHealingFixture());
-```
+## Keep healing honest
 
-### Available Methods
+A heal that lands on the wrong element still passes. If someone deletes the checkout button and the
+model confidently clicks a different one, your suite goes green and nobody finds out. Three
+settings decide when that's acceptable.
 
-All methods take a locator (or empty string for AI-only) and a description:
-
-| Method | What it does |
-|--------|-------------|
-| `heal.click(locator, desc, options?)` | Click an element |
-| `heal.fill(locator, desc, value)` | Fill an input |
-| `heal.selectOption(locator, desc, value)` | Select from dropdown |
-| `heal.check(locator, desc)` | Check a checkbox |
-| `heal.uncheck(locator, desc)` | Uncheck a checkbox |
-| `heal.dblclick(locator, desc)` | Double-click |
-| `heal.hover(locator, desc)` | Hover over element |
-| `heal.focus(locator, desc)` | Focus element |
-| `heal.locator(selector, desc)` | Create self-healing locator for chaining |
-| `heal.getLocator(selector, desc)` | Resolve to a real Playwright `Locator` (works with `expect`) |
-
-### Self-Healing Locator
-
-Create a locator that combines a CSS selector with a semantic description. If the selector fails, AI takes over:
+**`minConfidence`** fails the action instead of guessing when the model isn't sure:
 
 ```typescript
-// Combines selector with semantic fallback - best of both worlds
-await page.heal.locator('.new-todo', 'Input field for new todos').fill('Buy milk');
-await page.heal.locator('.submit-btn', 'Submit button').click();
-await page.heal.locator('.toggle', 'Checkbox').check();
+createHealingFixture({ minConfidence: 0.8 })   // or HEALWRIGHT_MIN_CONFIDENCE=0.8
 ```
 
-### AI-Only Mode
-
-Pass an empty string as the locator and let AI find the element:
-
-```typescript
-await page.heal.click('', 'Login button');
-await page.heal.fill('', 'Search input', 'my query');
-```
-
-This is useful when you don't have good selectors or want to make tests more readable.
-
-### Force Click (Hidden Elements)
-
-Some elements only appear on hover (like delete buttons). Use `{ force: true }` to click hidden elements:
-
-```typescript
-// First hover to reveal the element
-await page.heal.hover('', 'Todo item in the list');
-
-// Then force-click the hidden delete button
-await page.heal.click('', 'Delete button', { force: true });
-```
-
-### Assertions — `heal.getLocator()`
-
-`heal.locator()` wraps a fixed set of actions. When you need the element itself — for an assertion,
-for `.nth()`, for `press()`, for anything Playwright offers — use `getLocator()`. It returns a real
-`Locator`, healed if the selector no longer matches:
-
-```typescript
-const badge = await page.heal.getLocator('.cart-count', 'Cart item count badge');
-await expect(badge).toHaveText('1');
-
-// Everything on Locator is available, because it *is* a Locator
-const rows = await page.heal.getLocator('.order-row', 'Order history rows');
-await expect(rows).toHaveCount(3);
-await rows.nth(0).click();
-```
-
-This is usually the method you want. `heal.click(...)` and friends remain useful when you want the
-action and the healing in one call.
-
-### Trusting the Heal — confidence, modes, and the run summary
-
-Self-healing has a failure mode that a crash does not: it can turn a real regression into a passing
-test. If someone deletes the checkout button and the AI confidently clicks a different one, your
-suite goes green and nobody finds out. Three controls exist so you decide when that is acceptable.
-
-**`minConfidence`** rejects weak matches outright:
-
-```typescript
-createHealingFixture({ minConfidence: 0.75 })  // or HEALWRIGHT_MIN_CONFIDENCE=0.75
-```
-
-The model reports how sure it is about each strategy. Below the threshold, healwright fails the
-action instead of guessing — the test breaks, which is the honest answer.
-
-**`mode: 'warn'`** audits without changing behaviour. Healing runs, reports what it *would* have
-done, then lets the original failure stand:
+**`mode: 'warn'`** reports what would have healed and keeps the original failure. Cached heals are
+reported too, never applied, so a committed cache can't turn the audit green:
 
 ```bash
 HEALWRIGHT_MODE=warn npx playwright test
 ```
 
-Use it in CI to see how far your locators have drifted without letting healing paper over it.
-
-**`getHealSummary()`** gives you the tally, so a build can fail on drift:
+**`getHealSummary()`** counts every heal in the run, so global teardown can fail the build and
+list the selectors to fix:
 
 ```typescript
-// global-teardown.ts
+// global-teardown.ts  (playwright.config.ts: globalTeardown: './global-teardown.ts')
 import { getHealSummary } from 'healwright';
 
 export default function () {
-  const { healed, fromCache, entries } = getHealSummary();
-  if (healed > 0) {
-    console.error(`${healed} locator(s) needed healing — update the source selectors:`);
-    for (const e of entries.filter(e => e.outcome === 'healed')) {
-      console.error(`  ${e.action} "${e.contextName}" → ${JSON.stringify(e.strategy)}`);
-    }
-    process.exitCode = 1;
+  const { healed, entries } = getHealSummary();
+  if (healed === 0) return;
+
+  console.error(`${healed} locator(s) needed healing. Update these selectors:`);
+  for (const e of entries.filter((e) => e.outcome === 'healed')) {
+    console.error(`  ${e.action} "${e.contextName}" → ${JSON.stringify(e.strategy)}`);
   }
+  process.exitCode = 1;
 }
 ```
 
-Point `globalTeardown` at that file in `playwright.config.ts` and healing becomes a signal you act
-on rather than one that hides.
+Tests run in worker processes and teardown runs in the runner, so every outcome is also written to
+`.self-heal/heal_summary.jsonl` (or `HEALWRIGHT_SUMMARY_FILE`), and the summary reads it from
+there. Only the current run counts. If your runner stays alive between runs (UI or watch mode),
+call `resetHealSummary()` from `globalSetup` to start each run at zero.
 
-### Custom Endpoints and Providers
+## API
 
-Any OpenAI-compatible gateway works through `baseURL`:
+### Methods on `page.heal`
 
-```bash
-export AI_PROVIDER=openai
-export AI_BASE_URL="https://openrouter.ai/api/v1"
-export AI_API_KEY="your-key"
-export AI_MODEL="anthropic/claude-sonnet-4"
+Every action takes a selector or Locator (or `''` to rely on the description alone) and a
+description.
+
+| Method | What it does |
+|--------|-------------|
+| `click(target, desc, { force? })` | Click. `force: true` clicks controls that only appear on hover |
+| `dblclick(target, desc)` | Double-click |
+| `fill(target, desc, value)` | Type into an input or textarea |
+| `selectOption(target, desc, value)` | Choose an option in a dropdown |
+| `check(target, desc)` | Check a checkbox or radio |
+| `uncheck(target, desc)` | Uncheck a checkbox |
+| `hover(target, desc)` | Hover over an element |
+| `focus(target, desc)` | Focus an element |
+| `locator(selector, desc)` | A chainable locator with the same actions |
+| `getLocator(selector, desc)` | A real Playwright `Locator`, healed if needed |
+
+### `heal.getLocator()` for assertions
+
+`getLocator()` returns a real `Locator`, so `expect()`, `.nth()`, `.filter()`, `press()` and
+everything else Playwright offers work on it:
+
+```typescript
+const badge = await page.heal.getLocator('.cart-count', 'Cart item count');
+await expect(badge).toHaveText('1');
+
+const rows = await page.heal.getLocator('.order-row', 'Order history rows');
+await expect(rows).toHaveCount(3);
+await rows.nth(0).click();
 ```
 
-For anything else, implement `AIProvider` and pass it in — healwright never constructs a client of
-its own when you do:
+### Chainable locators
+
+```typescript
+await page.heal.locator('.new-todo', 'New todo input').fill('Buy milk');
+await page.heal.locator('.toggle-all', 'Mark all as done').check();
+```
+
+### Controls that only appear on hover
+
+```typescript
+await page.heal.hover('', 'Todo item');
+await page.heal.click('', 'Delete button', { force: true });   // dispatches the click directly
+```
+
+### Without the fixture
+
+```typescript
+import { withHealing } from 'healwright';
+
+const healPage = withHealing(page, { minConfidence: 0.8 });
+await healPage.heal.click('#buy-now', 'Place order button');
+```
+
+## Providers
+
+| Provider | `AI_PROVIDER` | Install | What it needs |
+|----------|---------------|---------|---------------|
+| OpenAI (default) | `openai` or `gpt` | `npm install openai` | `AI_API_KEY` |
+| Anthropic Claude | `anthropic` or `claude` | `npm install @anthropic-ai/sdk` | `AI_API_KEY` |
+| Google Gemini | `google` or `gemini` | `npm install @google/genai` | `AI_API_KEY` |
+| TypeSafe Jev | `typesafe` or `jev` | `npm install @typesafe-ai/sdk` | `TYPESAFE_API_KEY` (or `AI_API_KEY`) |
+| Ollama, local | `local` or `ollama` | `npm install ollama` | Ollama running; no key |
+
+If the SDK for your provider isn't installed, the first heal fails with the exact `npm install`
+command to run.
+
+Each provider has a default model. Set `AI_MODEL` to choose your own.
+
+### TypeSafe Jev
+
+[Jev](https://docs.typesafe.ai/introduction) is a System One model: instead of writing text, it
+answers typed questions with calibrated probabilities, which makes it fast and very cheap. Healwright
+uses it differently from the chat models. It asks Jev which of the collected elements is the one you
+described, and whether that element is on the page at all, then builds the locator in code from the
+chosen element's own attributes. The answer can only ever be an element that was on the page, and
+its probability becomes the confidence that `minConfidence` checks.
+
+```bash
+AI_PROVIDER=typesafe
+TYPESAFE_API_KEY=...
+```
+
+On healwright's element suite (76 deliberately broken locators across buttons, links, inputs,
+checkboxes, ARIA widgets and hidden controls), Jev healed all 76. A heal costs about $0.0001, and
+the API round trip with 40 candidates took under a quarter of a second. When a description matches
+nothing on the page, Jev says so instead of guessing, and the error shows its best guess with the
+scores, so a description that doesn't match the page is easy to spot. Describe elements by what's
+actually there.
+
+### Custom endpoints and your own provider
+
+`AI_BASE_URL` (or the `baseURL` option) points a built-in provider at another endpoint, such as
+Azure OpenAI, OpenRouter, vLLM, LiteLLM or your own gateway:
+
+```bash
+AI_PROVIDER=openai
+AI_BASE_URL=https://openrouter.ai/api/v1
+AI_API_KEY=your-key
+AI_MODEL=your-model
+```
+
+For a model healwright has no client for, implement `AIProvider` and pass it in. Healwright never
+constructs a client of its own when you do:
 
 ```typescript
 import { createHealingFixture, type AIProvider } from 'healwright';
@@ -255,154 +297,139 @@ export const test = base.extend<{ page: HealPage }>(
 );
 ```
 
-### Mixing Healing with Regular Playwright
+### Local LLM with Ollama
 
-Just because you've added healwright doesn't mean you have to use `page.heal.*` for everything. The wrapped page still works exactly like a normal Playwright page, so you can mix and match as needed:
+Run healing entirely on your machine with [Ollama](https://ollama.com): no API keys, no cloud
+calls, no usage fees.
 
-```typescript
-// Use healing for elements that tend to break
-await page.heal.fill('', 'Input field for new todo items', 'Buy groceries');
-
-// Use regular Playwright for stable selectors
-await page.fill('#username', 'testuser');
-await page.click('button[type="submit"]');
+```bash
+ollama pull gemma3:4b                                # 1. pull a model
+AI_PROVIDER=local SELF_HEAL=1 npx playwright test    # 2. point healwright at it
 ```
 
-Pick the approach that makes sense for each action. Maybe you use healing for that flaky third-party widget but stick with regular locators for your own well-structured components. It's your call.
+| Model | Size | Tested | Good for |
+|-------|------|--------|----------|
+| `llama3.2:3b` | 2.0 GB | 5/5 pass | The best overall choice: fast, accurate and small |
+| `mistral` | 4.1 GB | 5/5 pass | The most accurate, and the slowest (about 1.4 min per run) |
+| `gemma3:4b` (default) | 3.3 GB | 4/5 pass | Faster than mistral (about 53 s), slightly less accurate |
+
+Small models (1B to 4B) can struggle when several elements look alike, such as a row of
+checkboxes. If accuracy matters more than speed, use `mistral` or a larger model. Any model from
+the [Ollama library](https://ollama.com/library) works through `AI_MODEL`, and `OLLAMA_HOST`
+points at an Ollama server on another machine.
 
 ## Configuration
 
-### Environment Variables
+### Fixture options
 
-| Variable | Description |
+Pass these to `createHealingFixture()` or `withHealing(page, options)`.
+
+| Option | Default | What it does |
+|--------|---------|-------------|
+| `enabled` | `SELF_HEAL=1` | Turns healing on |
+| `mode` | `'heal'` | `'heal'`, `'warn'` (report only) or `'off'` |
+| `provider` | `'openai'` | `openai`, `anthropic`, `google`, `typesafe` or `local` |
+| `model` | Provider default | Overrides the model |
+| `apiKey` | `AI_API_KEY` | The provider's API key |
+| `baseURL` | `AI_BASE_URL` | Sends requests to another endpoint |
+| `aiProvider` | None | Your own provider, used instead of the built-in clients |
+| `minConfidence` | `0` | Rejects heals scored below this (0 to 1). `0` accepts any |
+| `quickTimeout` | `1000` | Milliseconds your own selector gets before healing starts |
+| `timeout` | `5000` | Milliseconds for the healed locator and the action |
+| `maxCandidates` | `40` | How many ranked elements are sent to the model |
+| `maxAiTries` | `4` | How many suggested strategies are checked before giving up |
+| `cacheFile` | `.self-heal/healed_locators.json` | Where heals are cached |
+| `reportFile` | `.self-heal/heal_events.jsonl` | Where heal attempts are logged |
+| `logLevel` | `'info'` | `'info'`, `'error'` or `'silent'` |
+
+`quickTimeout` is short on purpose: a broken selector should fail fast. If parts of your app
+legitimately render slowly, raise it. Too low a value turns "slow" into "broken" and spends a model
+call on it.
+
+### Environment variables
+
+| Variable | What it does |
 |----------|-------------|
-| `SELF_HEAL` | Set to `1` to enable healing |
-| `AI_API_KEY` | Your AI provider API key |
-| `AI_PROVIDER` | `openai`/`gpt`, `anthropic`/`claude`, `google`/`gemini`, or `local`/`ollama` |
-| `AI_MODEL` | Override the default model (optional) |
-| `AI_BASE_URL` | Point a provider at a different endpoint — Azure, OpenRouter, vLLM, a gateway |
-| `HEALWRIGHT_MODE` | `heal` (default), `warn` (report only), or `off` |
-| `HEALWRIGHT_MIN_CONFIDENCE` | Reject heals scoring below this (0-1, default `0`) |
-| `HEALWRIGHT_LOG` | `info` (default), `error`, or `silent` |
-| `OLLAMA_HOST` | Ollama server URL (default: `http://127.0.0.1:11434`) |
+| `SELF_HEAL` | Set to `1` to turn healing on |
+| `AI_PROVIDER` | `openai`/`gpt`, `anthropic`/`claude`, `google`/`gemini`, `typesafe`/`jev`, or `local`/`ollama` |
+| `AI_API_KEY` | The provider's API key. Not needed for Ollama |
+| `TYPESAFE_API_KEY` | TypeSafe's API key, read before `AI_API_KEY` when the provider is TypeSafe |
+| `AI_MODEL` | Overrides the provider's default model |
+| `AI_BASE_URL` | Sends requests to another endpoint |
+| `OLLAMA_HOST` | Your Ollama server. Defaults to `http://127.0.0.1:11434` |
+| `HEALWRIGHT_MODE` | `heal`, `warn` or `off` |
+| `HEALWRIGHT_MIN_CONFIDENCE` | Same as `minConfidence` |
+| `HEALWRIGHT_LOG` | `info`, `error` or `silent` |
+| `HEALWRIGHT_SUMMARY_FILE` | Moves the summary file from `.self-heal/heal_summary.jsonl` |
 
-**Default models by provider:**
-- **OpenAI:** `gpt-5-nano`
-- **Anthropic:** `claude-sonnet-4-20250514`
-- **Google:** `gemini-2.5-flash`
-- **Local (Ollama):** `gemma3:4b`
+## Cache and logs
 
-### Fixture Options
+| File in `.self-heal/` | What's in it | In git? |
+|------|-------------|---------|
+| `healed_locators.json` | Every heal that worked, by action, page path and description | Commit it to share heals with your team and CI |
+| `heal_events.jsonl` | One line per heal attempt: the model's reason, confidence and token count | Ignore |
+| `heal_summary.jsonl` | The outcomes `getHealSummary()` reads at the end of a run | Ignore |
 
-You can pass options when creating the healing fixture:
+```gitignore
+.self-heal/heal_events.jsonl
+.self-heal/heal_summary.jsonl
+.self-heal/*.lock
+.self-heal/*.tmp
+# Or keep heals local to each machine instead:
+# .self-heal/
+```
+
+## Keeping token use low
+
+- **Compact candidates.** Only attributes that have a value are sent, with short keys (`tid` for a
+  test id, `txt` for text).
+- **Hidden elements are flagged, not dropped.** Real apps hide the element you want (styled
+  checkboxes, hover-only buttons), so hidden elements are sent marked `hid: true`.
+- **Rank, then cut.** Everything is scored by keyword match, element type, ARIA role and test id
+  before the top `maxCandidates` are sent.
+- **Short answers.** The model returns at most three strategies.
+
+Fewer candidates means fewer tokens and faster answers. The default of 40 suits most pages:
 
 ```typescript
-const test = base.extend<{ page: HealPage }>(createHealingFixture({
-  maxCandidates: 40,     // Ranked elements sent to the AI (default: 40)
-  maxAiTries: 4,         // Max AI strategies to validate (default: 4)
-  timeout: 5000,         // Healed-locator and action timeout in ms (default: 5000)
-  quickTimeout: 1000,    // How long the original locator gets first (default: 1000 when healing)
-  minConfidence: 0,      // Reject heals below this confidence, 0-1 (default: 0 = accept any)
-  mode: 'heal',          // 'heal' | 'warn' (report only) | 'off'
-  provider: 'openai',    // AI provider (default: 'openai')
-  model: 'gpt-5-nano',   // Override default model
-  baseURL: undefined,    // Custom API endpoint (Azure, OpenRouter, vLLM, gateway)
-  logLevel: 'info',      // 'info' | 'error' | 'silent'
-}));
+createHealingFixture({ maxCandidates: 15 })   // simple pages: cheaper and faster
+createHealingFixture({ maxCandidates: 80 })   // dense pages: better accuracy
 ```
 
-> **A note on `quickTimeout`.** When healing is on, the original locator only gets 1 second before
-> the AI takes over — a broken selector should fail fast. If your app legitimately renders slowly,
-> raise this. Leaving it too low turns "slow" into "broken" and spends an AI call on it.
+Token usage is printed for every heal and recorded in `heal_events.jsonl` for cost tracking.
 
-### Token Optimization
+## Privacy and security
 
-Healwright is designed to minimize AI token consumption and keep costs low:
+When healing runs, healwright sends a structured list of candidate elements (tag names, roles, ARIA
+labels, text, test ids and similar attributes) and the page URL to your AI provider. No screenshots
+and no full page HTML are sent. Hidden elements are included, flagged `hid: true`, because the
+element you want is often deliberately hidden.
 
-- **Compact candidates** — Only non-null attributes are sent. Null/empty fields are stripped, and short keys are used (`tid` instead of `data-testid`, `txt` instead of `text`, etc.)
-- **Hidden elements are marked, not dropped** — Elements that are `display: none`, `visibility: hidden` or zero-size are still sent, flagged with `hid: true`. Real apps hide the element you actually want (styled checkboxes, hover-revealed buttons), so excluding them would break more heals than it saves tokens on
-- **Rank, then truncate** — Everything matching is collected first, then `rankCandidates()` scores each element by keyword match, tag-type inference, ARIA role relevance and test-ID presence. Only the top `maxCandidates` are sent. Ranking before truncation matters: cutting the list in DOM order first would hide the target on a long page
-- **Capped output** — The AI is asked to return a maximum of 3 strategies per request
-- **Configurable limit** — `maxCandidates` controls how many ranked elements reach the model
+If the DOM can contain sensitive data such as personal or financial details or internal URLs, you
+can:
 
-Lower `maxCandidates` = fewer tokens = lower cost and faster responses. The default of 40 works well for most pages:
+- **Use a local model** with `AI_PROVIDER=local`, so nothing leaves your machine.
+- **Use your own endpoint** with `AI_BASE_URL`, or your own provider with `aiProvider`, for full
+  control over what is sent.
+- **Limit healing** to non-production environments.
+- **Review what was sent** in `.self-heal/heal_events.jsonl`.
 
-```typescript
-// Simple pages — fewer candidates, faster & cheaper
-createHealingFixture({ maxCandidates: 15 })
+## Known limitations
 
-// Complex pages — more candidates, better accuracy
-createHealingFixture({ maxCandidates: 80 })
-```
+- Cloud providers need an API key and network access; a local model needs neither.
+- A heal adds model latency, usually 1 to 2 seconds with a cloud model and more on slow local
+  hardware.
+- Only the main frame is searched, so elements inside iframes aren't candidates yet. Open shadow
+  roots are searched.
+- `force: true` clicks dispatch the event directly, without pointer coordinates.
+- The cache is shared across parallel workers through a lock file. It's best effort, not a
+  database.
 
-### Token Usage Visibility
+## Try it without your own project
 
-Each healing call logs the token consumption reported by the AI provider:
-
-```
-↑ 1350 input · 180 output · 1530 total tokens
-```
-
-Token usage is also recorded in `.self-heal/heal_events.jsonl` for cost tracking and analysis across test runs.
-
-### Cache
-
-Healed selectors get cached in `.self-heal/`. Add it to your `.gitignore`:
-
-```
-.self-heal/
-```
-
-## How It Works
-
-1. Try the original locator
-2. If it fails, check the cache for a previously healed selector
-3. If not cached, send page context to the AI and ask it to find the element
-4. Cache the result for next time
-
-## Example
-
-```typescript
-import { test as base, expect } from '@playwright/test';
-import { createHealingFixture, HealPage } from 'healwright';
-
-const test = base.extend<{ page: HealPage }>(createHealingFixture());
-
-test('checkout flow', async ({ page }) => {
-  await page.goto('/shop');
-  
-  // These might break when the UI changes, but healwright will adapt
-  await page.heal.click(
-    page.locator('[data-testid="add-to-cart"]'),
-    'Add to cart button'
-  );
-  
-  await page.heal.click(
-    page.locator('.cart-icon'),
-    'Shopping cart icon'
-  );
-  
-  await page.heal.fill(
-    page.locator('#email'),
-    'Email field in checkout',
-    'customer@example.com'
-  );
-  
-  // No selector at all - just describe it
-  await page.heal.click('', 'Place order button');
-});
-```
-
-## Live Demo
-
-<div align="center">
-  <a href="https://youtu.be/qyHSG0K99i4">
-    <img src="https://img.youtube.com/vi/qyHSG0K99i4/0.jpg" alt="healwright Demo Video" width="600"/>
-  </a>
-  <p><em>▶ Click to watch the demo on YouTube</em></p>
-</div>
-
-Want to see healwright in action without touching your own project? Check out the **[`test-published`](https://github.com/amrsa1/healwright/tree/test-published)** branch — a standalone mini-project that imports the published npm package and runs tests with intentionally broken selectors.
+The [`test-published`](https://github.com/amrsa1/healwright/tree/test-published) branch is a
+standalone project that installs the published package and runs tests with deliberately broken
+selectors:
 
 ```bash
 git clone -b test-published https://github.com/amrsa1/healwright.git healwright-demo
@@ -412,71 +439,24 @@ cp example.env .env   # add your API key
 npm test
 ```
 
-It includes two smoke tests:
-- **Broken locator** — uses a wrong selector (`#wrong-todo-input`), AI heals it to the real input
-- **AI-only mode** — no selector at all, AI finds the element from a plain-English description
-
-## Privacy & Security
-
-When healing is triggered, healwright sends a **DOM snapshot** of candidate elements (tag names, roles, aria labels, text content, test IDs, etc.) to the configured AI provider's API. **No screenshots or full page HTML are sent** — only a structured list of relevant elements.
-
-Keep this in mind if your application contains sensitive data in the DOM (e.g., PII, financial data, internal URLs). Note that hidden elements are included in that snapshot (flagged `hid: true`), because the element
-you want is often deliberately hidden. The page URL is also sent.
-
-You can:
-- **Use a local LLM** with `AI_PROVIDER=local` — data never leaves your machine
-- **Point at a self-hosted or on-premise endpoint** with `AI_BASE_URL` (or the `baseURL` option) — works with Azure OpenAI, OpenRouter, vLLM, LiteLLM, or any OpenAI-compatible gateway
-- **Bring your own provider** with the `aiProvider` option, for full control over what is sent
-- Limit healing to non-production environments
-- Review the candidate data sent via the `.self-heal/heal_events.jsonl` log
-
-### Local LLM with Ollama
-
-For maximum privacy and zero cost, run healing entirely on your machine with [Ollama](https://ollama.com):
-
-```bash
-# 1. Install Ollama (https://ollama.com) and pull a model
-ollama pull gemma3:4b
-
-# 2. Configure healwright
-export AI_PROVIDER=local
-export SELF_HEAL=1
-```
-
-That's it — no API keys, no cloud calls, no usage fees. Ollama runs the model locally and healwright talks to it directly.
-
-**Recommended models for healing** (sorted by size):
-
-| Model | Size | Context | Tested | Good for |
-|-------|------|---------|--------|----------|
-| `llama3.2:3b` ⭐ | 2.0 GB | 128K | 5/5 pass | Best overall choice — fast, accurate, and lightweight |
-| `mistral` ⭐ | 4.1 GB | 128K | 5/5 pass | Most accurate response, but slowest (~1.4 min per run) |
-| `gemma3:4b` | 3.3 GB | 128K | 4/5 pass | Faster than mistral (~53s), but slightly less accurate |
-
-> **Best results were achieved with `mistral`, `gemma3:4b`, and `llama3.2:3b`** — these three models consistently produced the most accurate healing across our test suite. `llama3.2:3b` stands out as the best overall choice, combining top accuracy with a small footprint. We recommend starting with one of them.
-
-> **Tip:** Small models (1B–4B) may struggle with ambiguous elements (e.g. multiple checkboxes on the same page). If accuracy matters more than speed, use `mistral` or a larger model.
-
-You can use **any model** from the [Ollama library](https://ollama.com/library) — just set `AI_MODEL`:
-
-```bash
-export AI_MODEL=llama3.2:3b   #or mistral, etc.
-```
-
-Custom Ollama host (e.g., running on another machine):
-
-```bash
-export OLLAMA_HOST=http://192.168.1.100:11434
-```
+It includes a broken-locator test, where `#wrong-todo-input` heals to the real input, and a
+description-only test with no selector at all. There's also a
+[demo video](https://youtu.be/qyHSG0K99i4) of a live session.
 
 ## Development
 
 ```bash
 npm install
+npm run typecheck && npm run lint && npm run test:unit
 npm run build
-SELF_HEAL=1 npm test
+npm run test:offline   # real-browser tests with a scripted provider, no API key
+SELF_HEAL=1 npm test   # end-to-end tests, needs an API key
 ```
+
+Issues and pull requests are welcome on
+[GitHub](https://github.com/amrsa1/healwright/issues). If healwright saves you a broken build, a
+star on the repo helps other people find it.
 
 ## License
 
-MIT
+[MIT](https://github.com/amrsa1/healwright/blob/main/LICENSE) © Amr Salem

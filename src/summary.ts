@@ -7,6 +7,8 @@
  * numbers say the source locators have drifted too far.
  */
 
+import fs from "node:fs";
+import path from "node:path";
 import type { StrategyT } from "./types";
 
 export type HealOutcome =
@@ -42,10 +44,55 @@ export interface HealSummary {
 }
 
 let entries: HealSummaryEntry[] = [];
+/** False once a write to the summary file has failed (read-only disk etc.). */
+let persisted = true;
+
+/**
+ * Playwright runs tests in worker processes but global setup and teardown in
+ * the runner process, so an in-memory tally is invisible where the README tells
+ * you to read it. Every outcome is therefore also appended to this file.
+ */
+function summaryFile(): string {
+  return process.env.HEALWRIGHT_SUMMARY_FILE ?? path.join(process.cwd(), ".self-heal", "heal_summary.jsonl");
+}
+
+/** Playwright sets TEST_WORKER_INDEX in worker processes only. */
+function isPlaywrightWorker(): boolean {
+  return process.env.TEST_WORKER_INDEX !== undefined;
+}
 
 /** Record one healing outcome. Called by the healing pipeline. */
 export function recordHealEvent(entry: HealSummaryEntry): void {
   entries.push(entry);
+  try {
+    const file = summaryFile();
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.appendFileSync(file, JSON.stringify({ ts: Date.now(), ...entry }) + "\n", "utf8");
+  } catch {
+    persisted = false;
+  }
+}
+
+/** Entries other processes recorded, or null when the file can't be read. */
+function readPersisted(): HealSummaryEntry[] | null {
+  let text: string;
+  try {
+    text = fs.readFileSync(summaryFile(), "utf8");
+  } catch (err: any) {
+    return err?.code === "ENOENT" ? [] : null;
+  }
+  // The runner process starts before any of its workers, so rows older than
+  // this process belong to an earlier run.
+  const runStart = Date.now() - process.uptime() * 1000;
+  const out: HealSummaryEntry[] = [];
+  for (const line of text.split("\n")) {
+    if (!line.trim()) continue;
+    try {
+      const { ts, ...entry } = JSON.parse(line);
+      if (typeof ts === "number" && ts >= runStart) out.push(entry as HealSummaryEntry);
+    } catch { /* skip a torn line */ }
+  }
+  return out;
 }
 
 /**
@@ -67,19 +114,30 @@ export function recordHealEvent(entry: HealSummaryEntry): void {
  * ```
  */
 export function getHealSummary(): HealSummary {
-  const count = (outcome: HealOutcome) => entries.filter(e => e.outcome === outcome).length;
+  // A worker reports its own heals; anywhere else (the runner's global
+  // teardown, a plain script) reads what every process wrote.
+  const source = isPlaywrightWorker() || !persisted ? entries : (readPersisted() ?? entries);
+  const count = (outcome: HealOutcome) => source.filter(e => e.outcome === outcome).length;
   return {
-    total: entries.length,
+    total: source.length,
     healed: count("healed"),
     fromCache: count("cache"),
     failed: count("failed"),
     belowConfidence: count("belowConfidence"),
     wouldHeal: count("wouldHeal"),
-    entries: entries.map(e => ({ ...e })),
+    entries: source.map(e => ({ ...e })),
   };
 }
 
-/** Clear the tally. Useful between test files or in your own reporting. */
+/**
+ * Clear the tally. Outside a worker this also empties the summary file, so
+ * calling it from `globalSetup` starts every run from zero.
+ */
 export function resetHealSummary(): void {
   entries = [];
+  persisted = true;
+  if (isPlaywrightWorker()) return;
+  try {
+    fs.writeFileSync(summaryFile(), "", "utf8");
+  } catch { /* no file yet, or read-only: nothing to clear */ }
 }

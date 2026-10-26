@@ -3,10 +3,11 @@
  * Uses the official @google/genai SDK (googleapis/js-genai)
  */
 
-import { GoogleGenAI } from "@google/genai";
-import { AIProvider, AIProviderConfig, GenerateHealPlanInput, HealPlanResult, DEFAULT_MODELS, cleanJson } from "./types";
+import type { GoogleGenAI } from "@google/genai";
+import { AIProvider, AIProviderConfig, GenerateHealPlanInput, HealPlanResult, DEFAULT_MODELS, PROVIDER_TIMEOUT_MS, cleanJson } from "./types";
 import { HealPlan } from "../types";
 import { healLog } from "../logger";
+import { loadSdk } from "./load";
 
 /**
  * Build the request. The schema goes through `responseJsonSchema` rather than
@@ -23,22 +24,40 @@ export function buildGoogleRequest(input: GenerateHealPlanInput, model: string):
     };
 }
 
+/**
+ * Client options. The SDK otherwise makes five attempts with up to 60 s
+ * between them, on top of healwright's own retries.
+ */
+export function googleClientOptions(config: Pick<AIProviderConfig, "apiKey" | "baseURL">) {
+    return {
+        apiKey: config.apiKey,
+        httpOptions: {
+            timeout: PROVIDER_TIMEOUT_MS,
+            retryOptions: { attempts: 1 },
+            ...(config.baseURL ? { baseUrl: config.baseURL } : {}),
+        },
+    };
+}
+
 export class GoogleProvider implements AIProvider {
     readonly name = "google" as const;
-    private ai: GoogleGenAI;
+    private ai: Promise<GoogleGenAI> | null = null;
     private model: string;
 
-    constructor(config: AIProviderConfig) {
-        this.ai = new GoogleGenAI({
-            apiKey: config.apiKey,
-            ...(config.baseURL ? { httpOptions: { baseUrl: config.baseURL } } : {}),
-        });
+    constructor(private readonly config: AIProviderConfig) {
         this.model = config.model ?? DEFAULT_MODELS.google;
+    }
+
+    private getClient(): Promise<GoogleGenAI> {
+        this.ai ??= loadSdk("@google/genai", "Gemini", () => import("@google/genai"))
+            .then(({ GoogleGenAI }) => new GoogleGenAI(googleClientOptions(this.config)));
+        return this.ai;
     }
 
     async generateHealPlan(input: GenerateHealPlanInput): Promise<HealPlanResult> {
         try {
-            const response = await this.ai.models.generateContent(
+            const ai = await this.getClient();
+            const response = await ai.models.generateContent(
                 buildGoogleRequest(input, this.model) as any,
             );
 

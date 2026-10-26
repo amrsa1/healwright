@@ -174,6 +174,24 @@ describe('cacheKey', () => {
     const k2 = cacheKey(mockPage, 'fill', 'Btn');
     expect(k1).not.toBe(k2);
   });
+
+  const at = (url: string) => cacheKey({ url: () => url } as any, 'click', 'Save');
+
+  it('shares one entry across records of the same page', () => {
+    expect(at('https://x.test/orders/123')).toBe('click::https://x.test/orders/:id::Save');
+    expect(at('https://x.test/orders/123')).toBe(at('https://x.test/orders/98765'));
+    expect(at('https://x.test/users/550e8400-e29b-41d4-a716-446655440000/edit'))
+      .toBe(at('https://x.test/users/123e4567-e89b-12d3-a456-426614174000/edit'));
+    expect(at('https://x.test/commits/9fceb02d0ae598e95dc970b74767f19372d61af8'))
+      .toBe(at('https://x.test/commits/a1b2c3d4e5f60718293a4b5c6d7e8f9012345678'));
+    expect(at('https://x.test/items/01ARZ3NDEKTSV4RRFFQ69G5FAV')).toBe('click::https://x.test/items/:id::Save');
+  });
+
+  it('keeps meaningful path segments apart', () => {
+    expect(at('https://x.test/v2/settings')).toBe('click::https://x.test/v2/settings::Save');
+    expect(at('https://x.test/products/blue-shirt')).toBe('click::https://x.test/products/blue-shirt::Save');
+    expect(at('https://x.test/orders')).not.toBe(at('https://x.test/orders/123'));
+  });
 });
 
 // ---------- formatStrategy ----------

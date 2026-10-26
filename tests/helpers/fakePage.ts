@@ -14,33 +14,51 @@ export function createFakePage(opts: {
   url?: string;
   /** Selectors that resolve to exactly one visible element. */
   present?: string[];
+  /** Selectors that resolve to exactly one element that is not visible. */
+  hidden?: string[];
+  /** Actions on these selectors throw the given message, as Playwright would. */
+  actionErrors?: Record<string, string>;
+  /** Selectors that resolve to an element the model was never shown. */
+  notShown?: string[];
+  /** The page lost the collected list (it navigated), so nothing can be verified. */
+  unverifiable?: boolean;
   candidates?: Record<string, unknown>[];
 } = {}) {
   const url = opts.url ?? 'https://example.test/checkout';
   const present = new Set(opts.present ?? []);
+  const hidden = new Set(opts.hidden ?? []);
   const calls: { action: string; selector: string }[] = [];
   const evaluateArgs: any[] = [];
 
   const makeLocator = (selector: string) => {
     const exists = present.has(selector);
+    const inDom = exists || hidden.has(selector);
+    const act = (action: string) => {
+      const message = opts.actionErrors?.[selector];
+      if (message) throw new Error(message);
+      calls.push({ action, selector });
+    };
     const locator: any = {
       __selector: selector,
-      count: vi.fn(async () => (exists ? 1 : 0)),
+      count: vi.fn(async () => (inDom ? 1 : 0)),
       isVisible: vi.fn(async () => exists),
       first: vi.fn(() => locator),
-      waitFor: vi.fn(async ({ timeout }: { timeout?: number } = {}) => {
+      // Answers "is this one of the collected elements?" for the grounding check.
+      evaluate: vi.fn(async () => (opts.unverifiable ? null : !(opts.notShown ?? []).includes(selector))),
+      waitFor: vi.fn(async ({ timeout, state }: { timeout?: number; state?: string } = {}) => {
         calls.push({ action: `waitFor:${timeout}`, selector });
-        if (!exists) throw new Error(`locator not found: ${selector}`);
+        const ok = state === 'attached' ? inDom : exists;
+        if (!ok) throw new Error(`locator not found: ${selector}`);
       }),
-      click: vi.fn(async () => { calls.push({ action: 'click', selector }); }),
-      dblclick: vi.fn(async () => { calls.push({ action: 'dblclick', selector }); }),
-      fill: vi.fn(async () => { calls.push({ action: 'fill', selector }); }),
-      check: vi.fn(async () => { calls.push({ action: 'check', selector }); }),
-      uncheck: vi.fn(async () => { calls.push({ action: 'uncheck', selector }); }),
-      hover: vi.fn(async () => { calls.push({ action: 'hover', selector }); }),
-      focus: vi.fn(async () => { calls.push({ action: 'focus', selector }); }),
-      selectOption: vi.fn(async () => { calls.push({ action: 'selectOption', selector }); }),
-      dispatchEvent: vi.fn(async () => { calls.push({ action: 'dispatchEvent', selector }); }),
+      click: vi.fn(async () => act('click')),
+      dblclick: vi.fn(async () => act('dblclick')),
+      fill: vi.fn(async () => act('fill')),
+      check: vi.fn(async () => act('check')),
+      uncheck: vi.fn(async () => act('uncheck')),
+      hover: vi.fn(async () => act('hover')),
+      focus: vi.fn(async () => act('focus')),
+      selectOption: vi.fn(async () => act('selectOption')),
+      dispatchEvent: vi.fn(async () => act('dispatchEvent')),
     };
     return locator;
   };

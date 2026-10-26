@@ -8,7 +8,12 @@ import { HealPlanT } from "../types";
 export { strictJsonSchema } from "../jsonSchema";
 export type { JsonSchemaObject } from "../jsonSchema";
 
-export type ProviderName = "openai" | "gpt" | "anthropic" | "claude" | "google" | "gemini" | "local" | "ollama";
+export type ProviderName =
+    | "openai" | "gpt"
+    | "anthropic" | "claude"
+    | "google" | "gemini"
+    | "local" | "ollama"
+    | "typesafe" | "jev";
 
 export interface AIProviderConfig {
     apiKey: string;
@@ -25,10 +30,20 @@ export function isReasoningModel(model: string): boolean {
     return /^(gpt-5|o[1-9])/i.test(model.trim());
 }
 
+/** What healing needs answered, as data rather than a prompt. */
+export interface HealRequest {
+    url: string;
+    action: string;
+    contextName: string;
+    candidates: Record<string, unknown>[];
+}
+
 export interface GenerateHealPlanInput {
     systemPrompt: string;
     userContent: string;
     jsonSchema: object;
+    /** The same request as structured data, for providers that don't take a prompt. */
+    heal?: HealRequest;
 }
 
 export interface TokenUsage {
@@ -40,6 +55,8 @@ export interface TokenUsage {
 export interface HealPlanResult {
     plan: HealPlanT | null;
     tokenUsage: TokenUsage | null;
+    /** The provider's own explanation of its answer, shown when healing fails. */
+    note?: string;
 }
 
 export interface AIProvider {
@@ -114,13 +131,22 @@ export function cleanJson(raw: string): string {
     return s.trim();
 }
 
+/**
+ * Per-request ceiling for provider calls. The SDKs default to ten minutes,
+ * which would stall a test far past its own timeout on a hung connection.
+ * Retries are left to healwright's `withRetry`, so the SDKs' own are off.
+ */
+export const PROVIDER_TIMEOUT_MS = 30_000;
+
 export const DEFAULT_MODELS: Record<ProviderName, string> = {
     openai: "gpt-5-nano",
     gpt: "gpt-5-nano",
-    anthropic: "claude-sonnet-4-20250514",
-    claude: "claude-sonnet-4-20250514",
+    anthropic: "claude-sonnet-5-5",
+    claude: "claude-sonnet-5-5",
     google: "gemini-2.5-flash",
     gemini: "gemini-2.5-flash",
     local: "gemma3:4b",
     ollama: "gemma3:4b",
+    typesafe: "jev-latest",
+    jev: "jev-latest",
 };

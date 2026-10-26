@@ -92,6 +92,16 @@ export async function waitForReady(loc: Locator, _action: string, timeout: numbe
 }
 
 /**
+ * True for Playwright's errors about acting on the wrong kind of element,
+ * such as filling a <div> or checking a button. When an existing selector
+ * starts matching a different element type, the locator is what broke.
+ */
+export function isWrongElementError(err: unknown): boolean {
+  const msg = String((err as { message?: unknown })?.message ?? err);
+  return /Element is not an? </.test(msg) || msg.includes("Not a checkbox or radio button");
+}
+
+/**
  * Wait for page to stabilize after navigation
  */
 export async function waitForStable(page: Page): Promise<void> {
@@ -138,6 +148,16 @@ const TEXT_ENTRY_PARTS = [
   "select", "[role='combobox']", "[data-testid]",
 ];
 
+// Controls that can be checked, selected or switched on. Custom toggles are
+// usually ARIA widgets or labels, not native inputs.
+const TOGGLE_PARTS = [
+  "input[type='checkbox']", "input[type='radio']",
+  "[role='checkbox']", "[role='radio']", "[role='switch']",
+  "[role='menuitemcheckbox']", "[role='menuitemradio']",
+  "[aria-checked]", "[aria-pressed]", "label",
+  "[data-testid]", "[data-test]", "[data-test-id]", "[data-qa]", "[data-cy]",
+];
+
 // Elements that expose a set of options.
 const CHOICE_PARTS = [
   "select", "[role='combobox']", "[role='listbox']", "option", "[role='option']",
@@ -164,11 +184,12 @@ export function candidateSelector(action: Action): string {
       return dedupe(CHOICE_PARTS);
     case "focus":
       return dedupe([...CLICKABLE_PARTS, ...TEXT_ENTRY_PARTS]);
-    case "locate":
-      return dedupe([...CLICKABLE_PARTS, ...TEXT_ENTRY_PARTS, ...CHOICE_PARTS]);
-    case "fill":
     case "check":
     case "uncheck":
+      return dedupe(TOGGLE_PARTS);
+    case "locate":
+      return dedupe([...CLICKABLE_PARTS, ...TEXT_ENTRY_PARTS, ...TOGGLE_PARTS, ...CHOICE_PARTS]);
+    case "fill":
     default:
       return dedupe(TEXT_ENTRY_PARTS);
   }
@@ -183,7 +204,21 @@ export async function collectCandidates(page: Page, action: Action, limit = CAND
   const selector = candidateSelector(action);
 
   return page.evaluate(({ selector, limit }) => {
-    const els = Array.from(document.querySelectorAll(selector)).slice(0, limit);
+    // Walk open shadow roots too: web components (Lit, Shoelace, Salesforce
+    // LWC) keep their controls there, and Playwright's locators reach them.
+    // Shadow content is visited where its host appears, in document order.
+    const els: Element[] = [];
+    const visit = (root: Document | ShadowRoot) => {
+      for (const el of Array.from(root.querySelectorAll("*"))) {
+        if (els.length >= limit) return;
+        if (el.matches(selector)) els.push(el);
+        if (el.shadowRoot) visit(el.shadowRoot);
+      }
+    };
+    visit(document);
+    // Kept on the page (under a symbol, nothing added to the DOM) so a healed
+    // locator can be checked against the elements the model was shown.
+    (window as any)[Symbol.for("healwright.candidates")] = els;
     
     const pickTest = (el: Element) => {
       for (const a of ["data-testid", "data-test", "data-test-id", "data-qa", "data-cy"]) {
@@ -240,6 +275,19 @@ export async function collectCandidates(page: Page, action: Action, limit = CAND
     }
     return result;
   }, { selector, limit });
+}
+
+/**
+ * True when `loc` resolves to one of the collected elements at `indices`, or
+ * to something inside one (a <span> in a button). Null when the page no longer
+ * holds the collected list, for example after a navigation.
+ */
+export async function isShownCandidate(loc: Locator, indices: number[]): Promise<boolean | null> {
+  return loc.evaluate((el, idx) => {
+    const collected = (window as any)[Symbol.for("healwright.candidates")] as Element[] | undefined;
+    if (!collected) return null;
+    return idx.some(i => collected[i] === el || Boolean(collected[i]?.contains(el)));
+  }, indices);
 }
 
 /**
@@ -445,11 +493,40 @@ export async function appendLog(reportFile: string, entry: unknown) {
 }
 
 /**
- * Generate cache key for action + page + context
+ * A page URL without its query string or fragment, which can carry session
+ * tokens and one-time links. This is what reaches the model and the logs.
+ */
+export function redactUrl(raw: string): string {
+  try {
+    const u = new URL(raw);
+    return u.origin === "null" ? `${u.protocol}${u.pathname}` : `${u.origin}${u.pathname}`;
+  } catch {
+    return raw.split(/[?#]/)[0];
+  }
+}
+
+// Path segments that identify a record rather than a page: numbers, UUIDs,
+// long hex ids (commit SHAs, Mongo ids) and ULIDs.
+const ID_SEGMENT = [
+  /^\d+$/,
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+  /^[0-9a-f]{16,}$/i,
+  /^[0-9A-HJKMNP-TV-Z]{26}$/,
+];
+
+/**
+ * Generate cache key for action + page + context.
+ *
+ * Record ids in the path become `:id`, so a heal found on /orders/123 is
+ * reused on /orders/124 instead of every record growing its own entry.
  */
 export function cacheKey(page: Page, action: Action, contextName: string): string {
   const u = new URL(page.url());
-  return `${action}::${u.origin}${u.pathname}::${contextName}`;
+  const path = u.pathname
+    .split("/")
+    .map(seg => (seg && ID_SEGMENT.some(re => re.test(seg)) ? ":id" : seg))
+    .join("/");
+  return `${action}::${u.origin}${path}::${contextName}`;
 }
 
 /**

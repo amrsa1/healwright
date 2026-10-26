@@ -58,6 +58,9 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
+      - name: Browser tests (no API key needed)
+        run: npm run test:offline
+
       - name: E2E smoke tests
         run: npm run test:heal
 

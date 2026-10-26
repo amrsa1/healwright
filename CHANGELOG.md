@@ -3,6 +3,84 @@
 All notable changes to healwright are documented here.
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-10-26
+
+Healing that is harder to fool: it only starts when a locator is really broken, checks every answer
+against the page, and keeps report-only runs honest. This release also adds TypeSafe Jev as a
+provider, makes provider SDKs optional, and searches shadow DOM.
+
+### Upgrading from 1.x
+
+1. Install the SDK for your provider next to healwright: `openai` (the default),
+   `@anthropic-ai/sdk`, `@google/genai`, `@typesafe-ai/sdk` or `ollama`. For example,
+   `npm install healwright openai`.
+2. Use Node.js 22 or newer.
+3. If a test now fails with a "disabled" or "covered" error, that is the real problem surfacing.
+   Healwright no longer heals onto a different element when the one it found can't be used.
+
+### Breaking
+
+- Provider SDKs are optional peer dependencies. Install the one you use alongside healwright. A
+  missing SDK fails the first heal with the exact command to run, and installs no longer pull in all
+  five SDKs.
+- Requires Node.js 22 or newer, which the current OpenAI and TypeSafe SDKs already need.
+
+### Added
+
+- TypeSafe Jev provider (`AI_PROVIDER=typesafe` or `jev`, key in `TYPESAFE_API_KEY`). Jev chooses
+  which collected element matches the description, and whether it is on the page at all; healwright
+  builds the locator from that element's attributes, so the answer is always a real element. Its
+  probability is the heal's confidence.
+- `GenerateHealPlanInput.heal` passes the request as structured data to custom providers, alongside
+  the prompt.
+- Elements inside open shadow roots are collected as candidates, so web components can be healed.
+- `npm run test:offline`: real-browser tests with a scripted provider that need no API key. CI runs
+  them on every push.
+- Providers can explain a failed heal (`HealPlanResult.note`), and the `HealError` prints it. When
+  TypeSafe declines, the error shows Jev's best guess and its scores.
+
+### Fixed
+
+- `mode: 'warn'` no longer applies cached heals. A committed `healed_locators.json` made report-only
+  runs click the cached element and pass; the cached heal is now reported like any other.
+- `getHealSummary()` works from `globalTeardown`. The tally only lived in each worker's memory, so
+  the runner process always read zero. Outcomes are now also written to
+  `.self-heal/heal_summary.jsonl`, and only the current run is counted.
+- `heal.getLocator()` in `mode: 'warn'` writes its report to `heal_events.jsonl`, like the actions do.
+- The Anthropic provider defaults to `claude-sonnet-5-5`. The previous default was retired, so
+  `AI_PROVIDER=anthropic` without `AI_MODEL` failed.
+- Anthropic responses that open with thinking blocks are parsed. Structured output moves to
+  `output_config.format`, effort stays low on models that support it, and declined requests fall back
+  to another model on the Claude API.
+- Custom Anthropic endpoints keep receiving the key as `X-Api-Key`; SDK 1.x would otherwise send it as
+  `Authorization: Bearer`, which some gateways don't read.
+- Provider calls time out after 30 seconds, and the SDKs no longer retry underneath healwright's own
+  retries (Gemini alone could make 15 attempts per heal).
+- A cached heal for a `force: true` click is reused. Hover-only controls are never visible, so the
+  cache was always skipped and the model asked again.
+- A heal the model had no answer for is counted as failed in `getHealSummary()`.
+- Page URLs reach the model and the logs without their query string or fragment, which can carry
+  session tokens.
+- `heal.check()` and `heal.uncheck()` search custom checkboxes and switches (`role="checkbox"`,
+  `role="switch"`, labels), not only text inputs.
+- Healing only starts when the locator is broken. If the element was found but the action failed
+  (disabled, covered), the real error is thrown instead of healing onto a different element. A
+  selector that now matches the wrong kind of element (filling a `<div>`) still heals.
+- A healed locator must resolve to an element the model was shown, or to one inside it. A made-up
+  selector that happens to match something else is rejected.
+- Cache entries are shared across records: ids in the path (`/orders/123`) become `:id` in the key.
+- `heal.getLocator()` runs the same pipeline as the actions, so it now logs cache hits and failures
+  and reports provider errors as a counted `HealError`. Failed heals are logged once, not twice.
+
+### Changed
+
+- Dependencies updated to their latest versions, including `@anthropic-ai/sdk` 1.x, `vitest` 5 and `tsup` 9.
+
+### Docs
+
+- New website and getting-started guide, a rewritten README with an animated demo, and a new social
+  preview image.
+
 ## [1.8.0] - 2026-08-19
 
 Bug fixes, a confidence policy so healing can't quietly hide a regression, and support for custom endpoints.

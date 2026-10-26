@@ -5,7 +5,7 @@
 import type { Page, Locator } from "playwright-core";
 import path from "node:path";
 
-import { createAIProvider, AIProvider, ProviderName, TokenUsage } from "./providers";
+import { createAIProvider, resolveApiKey, AIProvider, ProviderName, TokenUsage } from "./providers";
 
 import { healLog } from "./logger";
 import { buildSystemPrompt, buildUserContent } from "./prompt";
@@ -32,12 +32,15 @@ import {
   validateStrategy,
   waitForReady,
   waitForStable,
+  isWrongElementError,
   collectCandidates,
   rankCandidates,
+  isShownCandidate,
   readJson,
   updateJson,
   appendLog,
   cacheKey,
+  redactUrl,
   meetsConfidence,
   normalizeConfidence,
   withRetry,
@@ -51,6 +54,9 @@ const DISABLED_HINT =
   "healwright: AI detection is off, so a description-only target cannot be resolved. " +
   "Set SELF_HEAL=1 (and AI_API_KEY, unless AI_PROVIDER=local) to enable it, " +
   "or pass a selector instead of an empty string.";
+
+const WARN_NO_ACTION = "Healing is in report-only mode (mode: 'warn'), so no action was taken";
+const WARN_NOT_REPLACED = "Healing is in report-only mode (mode: 'warn'), so the locator was not replaced";
 
 /**
  * Enhance a Playwright Page with self-healing capabilities.
@@ -74,8 +80,8 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
   const mode: HealMode = opts?.mode ?? (process.env.HEALWRIGHT_MODE as HealMode | undefined) ?? "heal";
   const envEnabled = process.env.SELF_HEAL === "1" || process.env.AI_SELF_HEAL === "true";
   const enabled = mode === "off" ? false : (opts?.enabled ?? envEnabled);
-  const apiKey = opts?.apiKey ?? process.env.AI_API_KEY;
   const providerName = (opts?.provider ?? process.env.AI_PROVIDER?.toLowerCase() ?? "openai") as ProviderName;
+  const apiKey = resolveApiKey(providerName, opts?.apiKey, process.env);
   const model = opts?.model ?? process.env.AI_MODEL;
   const baseURL = opts?.baseURL ?? process.env.AI_BASE_URL;
   const isLocalProvider = providerName === "local" || providerName === "ollama";
@@ -144,6 +150,10 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     plan: import("./types").HealPlanT | null;
     candidatesAnalyzed: number;
     tokenUsage: TokenUsage | null;
+    /** DOM indices of the elements the model was shown. */
+    shown: number[];
+    /** The provider's explanation of its answer, if it gave one. */
+    note?: string;
   }
 
   async function askAI(action: Action, contextName: string): Promise<AskAIResult> {
@@ -155,17 +165,20 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     const candidates = rankCandidates(allCandidates, contextName, maxCandidates);
     healLog.askingAI(contextName, candidates.length, allCandidates.length);
 
+    const url = redactUrl(page.url());
     const result = await withRetry(
       () => aiProvider!.generateHealPlan({
         systemPrompt: buildSystemPrompt(),
-        userContent: buildUserContent(page.url(), action, contextName, candidates),
+        userContent: buildUserContent(url, action, contextName, candidates),
         jsonSchema: healPlanJsonSchema,
+        heal: { url, action, contextName, candidates },
       }),
       2, // 2 retries (3 total attempts)
       1000,
     );
 
-    return { plan: result.plan, candidatesAnalyzed: candidates.length, tokenUsage: result.tokenUsage };
+    const shown = candidates.map(c => allCandidates.indexOf(c));
+    return { plan: result.plan, candidatesAnalyzed: candidates.length, tokenUsage: result.tokenUsage, shown, note: result.note };
   }
 
   interface PickResult {
@@ -177,6 +190,8 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
 
   interface PickValidOptions {
     skipVisibilityCheck?: boolean;
+    /** Elements the model was shown; a strategy resolving elsewhere is rejected. */
+    shown?: number[];
   }
 
   async function pickValid(plan: ReturnType<typeof HealPlan.parse>, options?: PickValidOptions): Promise<PickResult> {
@@ -211,6 +226,15 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
           }
         }
 
+        // A strategy the model made up can still match some other element.
+        // Only accept elements it was actually shown.
+        if (options?.shown && await isShownCandidate(loc, options.shown) === false) {
+          const reason = "not one of the elements shown to the model";
+          healLog.candidateRejected(c.strategy.type, reason);
+          strategiesTried.push({ type: c.strategy.type, reason });
+          continue;
+        }
+
         // The element resolves — but a low-confidence match is exactly the case
         // that turns a real regression into a silently passing test.
         if (!meetsConfidence(c.confidence, minConfidence)) {
@@ -233,6 +257,45 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     return { choice: null, strategiesTried, rejectedForConfidence };
   }
 
+  /** True when a strategy still points at exactly one element. */
+  async function resolvesUniquely(strategy: StrategyT): Promise<boolean> {
+    try {
+      return (await buildLocator(page, strategy).count()) === 1;
+    } catch {
+      return false;
+    }
+  }
+
+  interface WouldHeal {
+    ts: string;
+    url: string;
+    key: string;
+    action: Action;
+    contextName: string;
+    strategy: StrategyT;
+    source: "cache" | "ai";
+    confidence?: number;
+    why?: string;
+    tokenUsage?: TokenUsage | null;
+  }
+
+  /** Report-only mode: record the heal that was available, without applying it. */
+  async function reportWouldHeal(w: WouldHeal) {
+    await log({
+      ts: w.ts, url: w.url, key: w.key, action: w.action, contextName: w.contextName,
+      used: "warn", success: false, source: w.source,
+      confidence: w.confidence, why: w.why, strategy: w.strategy, tokenUsage: w.tokenUsage,
+    });
+    recordHealEvent({
+      outcome: "wouldHeal", action: w.action, contextName: w.contextName, url: w.url,
+      confidence: w.confidence === undefined ? undefined : normalizeConfidence(w.confidence),
+      strategy: w.strategy,
+      testName: currentTestName,
+    });
+    healLog.wouldHeal(w.contextName, w.strategy);
+    if (w.tokenUsage) healLog.tokenUsage(w.tokenUsage.inputTokens, w.tokenUsage.outputTokens, w.tokenUsage.totalTokens);
+  }
+
   async function saveToCache(key: string, strategy: StrategyT, contextName: string) {
     mem.set(key, strategy);
     const entry = { ...strategy, context: contextName, testName: currentTestName };
@@ -241,9 +304,172 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     diskCacheLoaded = true;
   }
 
+  /** How a caller uses the locator that healing produces. */
+  interface HealUse {
+    /** Resolves once the locator is usable; throws when it doesn't resolve. */
+    locate(loc: Locator): Promise<void>;
+    /** Acts on the located element; a no-op when the locator is the result. */
+    act(loc: Locator): Promise<void>;
+  }
+
+  interface HealJob {
+    /** The action the caller asked for; it names the cache entry and the logs. */
+    action: Action;
+    /** The candidate set the model chooses from. */
+    aiAction: Action;
+    contextName: string;
+    /** Why the caller's own locator failed, when there was one. */
+    originalError: Error | null;
+    /** A hover-only control, so a healed element need not be visible. */
+    forceClick: boolean;
+    /** The HealError message for report-only mode. */
+    warnMessage: string;
+    use: HealUse;
+  }
+
+  /**
+   * The healing pipeline shared by every action and by `getLocator`: cache,
+   * then the model, then validation. Report-only mode, the event log, the run
+   * summary and errors are handled here, once, so the two can't drift apart.
+   */
+  async function resolveHeal(job: HealJob): Promise<Locator> {
+    const { action, contextName, originalError, use } = job;
+    const ts = new Date().toISOString();
+    const url = redactUrl(page.url());
+    const key = cacheKey(page, action, contextName);
+    let note: string | undefined;
+    const errorContext = (candidatesAnalyzed: number, strategiesTried: Array<{ type: string; reason: string }>) => ({
+      action, contextName, url, candidatesAnalyzed, strategiesTried, originalError: originalError?.message, aiResponse: note,
+    });
+
+    // 1. The cache.
+    const cache = await ensureDiskCacheLoaded();
+    const cached = mem.get(key) ?? cache[key];
+    if (cached && mode === "warn") {
+      // Report-only mode never applies a heal, cached or fresh. A committed
+      // cache would otherwise turn every report into a silent pass.
+      if (await resolvesUniquely(cached)) {
+        await reportWouldHeal({ ts, url, key, action, contextName, strategy: cached, source: "cache" });
+        throw originalError ?? new HealError(job.warnMessage, errorContext(0, []));
+      }
+      healLog.cacheMiss(contextName);
+    } else if (cached) {
+      const cachedLoc = buildLocator(page, cached);
+      let located = false;
+      try {
+        await use.locate(cachedLoc);
+        located = true;
+        await use.act(cachedLoc);
+        await log({ ts, url, key, action, contextName, used: "cache", success: true, strategy: cached });
+        recordHealEvent({ outcome: "cache", action, contextName, url, strategy: cached, testName: currentTestName });
+        healLog.usedCache(contextName);
+        return cachedLoc;
+      } catch (err) {
+        // Found, but the action failed: that's the app's state, not a stale
+        // cache, and re-healing would act on some other element.
+        if (located && !isWrongElementError(err)) throw err;
+        healLog.cacheMiss(contextName);
+      }
+    }
+
+    // 2. The model.
+    let candidatesAnalyzed = 0;
+    let strategiesTried: Array<{ type: string; reason: string }> = [];
+    let tokenUsage: TokenUsage | null = null;
+    let reportOnly = false;
+    const printTokens = () => {
+      if (tokenUsage) healLog.tokenUsage(tokenUsage.inputTokens, tokenUsage.outputTokens, tokenUsage.totalTokens);
+    };
+
+    try {
+      const ai = await askAI(job.aiAction, contextName);
+      candidatesAnalyzed = ai.candidatesAnalyzed;
+      tokenUsage = ai.tokenUsage;
+      note = ai.note;
+
+      if (!ai.plan) {
+        await log({ ts, url, key, action, contextName, used: "healed", success: false, error: "AI returned no plan", tokenUsage });
+        recordHealEvent({ outcome: "failed", action, contextName, url, testName: currentTestName });
+        healLog.noValidCandidate(contextName);
+        printTokens();
+        throw new HealError("AI returned no suggestions", errorContext(candidatesAnalyzed, []));
+      }
+
+      // 3. Validation.
+      const pick = await pickValid(ai.plan, { skipVisibilityCheck: job.forceClick, shown: ai.shown });
+      strategiesTried = pick.strategiesTried;
+      const choice = pick.choice;
+
+      if (!choice) {
+        const low = pick.rejectedForConfidence;
+        await log({
+          ts, url, key, action, contextName, used: "healed", success: false,
+          error: low ? "Below minConfidence" : "No valid candidate",
+          confidence: low?.confidence, note, tokenUsage,
+        });
+        recordHealEvent({
+          outcome: low ? "belowConfidence" : "failed", action, contextName, url,
+          confidence: low?.confidence, strategy: low?.strategy, testName: currentTestName,
+        });
+        healLog.noValidCandidate(contextName);
+        printTokens();
+        throw new HealError(
+          low
+            ? `Best match scored ${low.confidence.toFixed(2)}, below the configured minConfidence of ${minConfidence}`
+            : "Could not find a matching element",
+          errorContext(candidatesAnalyzed, strategiesTried),
+        );
+      }
+
+      // Report-only mode: say what would have happened, then let the original
+      // failure stand so the suite still reflects the state of the app.
+      if (mode === "warn") {
+        reportOnly = true;
+        await reportWouldHeal({
+          ts, url, key, action, contextName, strategy: choice.strategy, source: "ai",
+          confidence: choice.confidence, why: choice.why, tokenUsage,
+        });
+        throw originalError ?? new HealError(job.warnMessage, errorContext(candidatesAnalyzed, strategiesTried));
+      }
+
+      // 4. Save, then use the healed locator.
+      await saveToCache(key, choice.strategy, contextName);
+      const healedLoc = buildLocator(page, choice.strategy);
+      await use.locate(healedLoc);
+      await use.act(healedLoc);
+
+      await log({
+        ts, url, key, action, contextName, used: "healed", success: true,
+        confidence: choice.confidence, why: choice.why, strategy: choice.strategy, tokenUsage,
+      });
+      recordHealEvent({
+        outcome: "healed", action, contextName, url,
+        confidence: normalizeConfidence(choice.confidence),
+        strategy: choice.strategy,
+        testName: currentTestName,
+      });
+      healLog.healed(contextName, choice.strategy);
+      printTokens();
+      return healedLoc;
+    } catch (err: any) {
+      // In report-only mode the failure is the intended outcome.
+      if (reportOnly) throw err;
+      // Outcomes above are already logged and counted; surface them as they are.
+      if (err instanceof HealError) {
+        healLog.healFailed(contextName, "No matching element found");
+        throw err;
+      }
+      const message = String(err?.message ?? err);
+      await log({ ts, url, key, action, contextName, used: "healed", success: false, error: `Heal failed: ${message}`, tokenUsage });
+      recordHealEvent({ outcome: "failed", action, contextName, url, testName: currentTestName });
+      healLog.healFailed(contextName, message);
+      throw new HealError(message, errorContext(candidatesAnalyzed, strategiesTried));
+    }
+  }
+
   // Generic heal action handler
   interface HealActionOptions {
-    aiAction?: Action; // Override action type for AI (e.g., check uses "fill" candidates)
+    aiAction?: Action; // Override action type for AI (e.g., dblclick uses click candidates)
     forceClick?: boolean; // Skip visibility check for hover-dependent buttons
   }
 
@@ -254,21 +480,30 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     performAction: (loc: Locator) => Promise<void>,
     options?: HealActionOptions
   ): Promise<void> {
-    const ts = new Date().toISOString();
-    const key = cacheKey(page, action, contextName);
     const aiOnlyMode = isAiOnlyTarget(target);
-    const url = page.url();
     let originalError: Error | null = null;
 
     // Try original locator first
     if (!aiOnlyMode) {
+      let located = false;
       try {
         const originalLoc = toLocator(page, target);
-        await waitForReady(originalLoc, action, quickTimeout);
+        if (options?.forceClick) {
+          // Hover-only controls are never visible; being in the page is enough.
+          await originalLoc.waitFor({ state: "attached", timeout: quickTimeout });
+        } else {
+          await waitForReady(originalLoc, action, quickTimeout);
+        }
+        located = true;
         await performAction(originalLoc);
         return;
       } catch (err: any) {
         if (!enabled) throw err;
+        // The element was found and the action itself failed: it's disabled,
+        // covered, or the page moved on. Healing would act on some other
+        // element and pass, so the real error stands. The exception is a
+        // selector that now matches the wrong kind of element.
+        if (located && !isWrongElementError(err)) throw err;
         originalError = err;
       }
     }
@@ -286,164 +521,29 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
       healLog.actionFailed(action, contextName);
     }
 
-    // Try cache
-    const cache = await ensureDiskCacheLoaded();
-    const cached = mem.get(key) ?? cache[key];
-
-    if (cached) {
-      try {
-        const cachedLoc = buildLocator(page, cached);
-        await waitForReady(cachedLoc, action, timeout);
-        await performAction(cachedLoc);
-        if (action === "click" || action === "dblclick" || action === "selectOption") await waitForStable(page);
-        await log({ ts, url, key, action, contextName, used: "cache", success: true, strategy: cached });
-        recordHealEvent({ outcome: "cache", action, contextName, url, strategy: cached, testName: currentTestName });
-        healLog.usedCache(contextName);
-        return;
-      } catch {
-        healLog.cacheMiss(contextName);
-      }
-    }
-
-    // Ask AI
-    let candidatesAnalyzed = 0;
-    let strategiesTried: Array<{ type: string; reason: string }> = [];
-    let tokenUsage: TokenUsage | null = null;
-
-    try {
-      const aiResult = await askAI(options?.aiAction ?? action, contextName);
-      candidatesAnalyzed = aiResult.candidatesAnalyzed;
-      tokenUsage = aiResult.tokenUsage;
-
-      if (!aiResult.plan) {
-        await log({ ts, url, key, action, contextName, used: "healed", success: false, error: "AI returned no plan", tokenUsage });
-        healLog.noValidCandidate(contextName);
-        if (tokenUsage) healLog.tokenUsage(tokenUsage.inputTokens, tokenUsage.outputTokens, tokenUsage.totalTokens);
-        throw new HealError("AI returned no suggestions", {
-          action,
-          contextName,
-          url,
-          candidatesAnalyzed,
-          strategiesTried: [],
-          originalError: originalError?.message,
-        });
-      }
-
-      const pickResult = await pickValid(aiResult.plan, { skipVisibilityCheck: options?.forceClick });
-      strategiesTried = pickResult.strategiesTried;
-      const choice = pickResult.choice;
-
-      if (!choice) {
-        const lowConfidence = pickResult.rejectedForConfidence;
-        const outcome = lowConfidence ? "belowConfidence" : "failed";
-        await log({
-          ts, url, key, action, contextName, used: "healed", success: false,
-          error: lowConfidence ? "Below minConfidence" : "No valid candidate",
-          confidence: lowConfidence?.confidence,
-          tokenUsage,
-        });
-        recordHealEvent({
-          outcome, action, contextName, url,
-          confidence: lowConfidence?.confidence,
-          strategy: lowConfidence?.strategy,
-          testName: currentTestName,
-        });
-        healLog.noValidCandidate(contextName);
-        if (tokenUsage) healLog.tokenUsage(tokenUsage.inputTokens, tokenUsage.outputTokens, tokenUsage.totalTokens);
-        throw new HealError(
-          lowConfidence
-            ? `Best match scored ${lowConfidence.confidence.toFixed(2)}, below the configured minConfidence of ${minConfidence}`
-            : "Could not find a matching element",
-          {
-            action,
-            contextName,
-            url,
-            candidatesAnalyzed,
-            strategiesTried,
-            originalError: originalError?.message,
-          },
-        );
-      }
-
-      // Report-only mode: say what would have happened, then let the original
-      // failure stand so the suite still reflects the state of the app.
-      if (mode === "warn") {
-        await log({
-          ts, url, key, action, contextName, used: "warn", success: false,
-          confidence: choice.confidence, why: choice.why, strategy: choice.strategy, tokenUsage,
-        });
-        recordHealEvent({
-          outcome: "wouldHeal", action, contextName, url,
-          confidence: normalizeConfidence(choice.confidence),
-          strategy: choice.strategy,
-          testName: currentTestName,
-        });
-        healLog.wouldHeal(contextName, choice.strategy);
-        if (tokenUsage) healLog.tokenUsage(tokenUsage.inputTokens, tokenUsage.outputTokens, tokenUsage.totalTokens);
-        if (originalError) throw originalError;
-        throw new HealError("Healing is in report-only mode (mode: 'warn'), so no action was taken", {
-          action, contextName, url, candidatesAnalyzed, strategiesTried,
-        });
-      }
-
-      await saveToCache(key, choice.strategy, contextName);
-
-      const healedLoc = buildLocator(page, choice.strategy);
-      // Skip visibility wait when force is used (for hover-dependent elements)
-      if (!options?.forceClick) {
-        await waitForReady(healedLoc, action, timeout);
-      }
-      await performAction(healedLoc);
-      if (action === "click" || action === "dblclick" || action === "selectOption") await waitForStable(page);
-
-      await log({
-        ts, url, key, action, contextName,
-        used: "healed", success: true,
-        confidence: choice.confidence, why: choice.why,
-        strategy: choice.strategy,
-        tokenUsage,
-      });
-      recordHealEvent({
-        outcome: "healed", action, contextName, url,
-        confidence: normalizeConfidence(choice.confidence),
-        strategy: choice.strategy,
-        testName: currentTestName,
-      });
-      healLog.healed(contextName, choice.strategy);
-      if (tokenUsage) healLog.tokenUsage(tokenUsage.inputTokens, tokenUsage.outputTokens, tokenUsage.totalTokens);
-    } catch (healErr: any) {
-      // If it's already a HealError, just re-throw it
-      if (healErr instanceof HealError) {
-        await log({
-          ts, url, key, action, contextName,
-          used: "healed", success: false,
-          error: healErr.message,
-        });
-        healLog.healFailed(contextName, "No matching element found");
-        throw healErr;
-      }
-
-      // In warn mode the original failure is the intended outcome, not a bug.
-      if (mode === "warn" && originalError && healErr === originalError) throw healErr;
-
-      // Otherwise wrap it in a HealError for better context
-      await log({
-        ts, url, key, action, contextName,
-        used: "healed", success: false,
-        error: `Heal failed: ${String(healErr?.message ?? healErr)}`,
-      });
-      recordHealEvent({ outcome: "failed", action, contextName, url, testName: currentTestName });
-      healLog.healFailed(contextName, String(healErr?.message ?? healErr));
-
-      throw new HealError(String(healErr?.message ?? healErr), {
-        action,
-        contextName,
-        url,
-        candidatesAnalyzed,
-        strategiesTried,
-        originalError: originalError?.message,
-      });
-    }
+    const settles = action === "click" || action === "dblclick" || action === "selectOption";
+    await resolveHeal({
+      action,
+      aiAction: options?.aiAction ?? action,
+      contextName,
+      originalError,
+      forceClick: Boolean(options?.forceClick),
+      warnMessage: WARN_NO_ACTION,
+      use: {
+        locate: async (loc) => {
+          if (options?.forceClick) {
+            // A hover-only control is never visible; require a single match.
+            if (await loc.count() !== 1) throw new Error("locator no longer resolves to one element");
+          } else {
+            await waitForReady(loc, action, timeout);
+          }
+        },
+        act: async (loc) => {
+          await performAction(loc);
+          if (settles) await waitForStable(page);
+        },
+      },
+    });
   }
 
   /**
@@ -459,7 +559,6 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     options?: GetLocatorOptions,
   ): Promise<Locator> {
     const action: Action = options?.as ?? "locate";
-    const url = page.url();
 
     if (!isAiOnlyTarget(selector)) {
       const original = toLocator(page, selector);
@@ -476,75 +575,20 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     showBannerOnce();
     healLog.aiDetectMode(action, contextName);
 
-    const key = cacheKey(page, action, contextName);
-    const cache = await ensureDiskCacheLoaded();
-    const cached = mem.get(key) ?? cache[key];
-    if (cached) {
-      try {
-        const cachedLoc = buildLocator(page, cached);
-        if (await cachedLoc.count() === 1) {
-          recordHealEvent({ outcome: "cache", action, contextName, url, strategy: cached, testName: currentTestName });
-          healLog.usedCache(contextName);
-          return cachedLoc;
-        }
-      } catch { /* stale cache — re-heal below */ }
-      healLog.cacheMiss(contextName);
-    }
-
-    const { plan, candidatesAnalyzed, tokenUsage } = await askAI(action, contextName);
-    const pickResult = plan
-      ? await pickValid(plan)
-      : { choice: null, strategiesTried: [], rejectedForConfidence: null };
-
-    if (!pickResult.choice) {
-      const lowConfidence = pickResult.rejectedForConfidence;
-      recordHealEvent({
-        outcome: lowConfidence ? "belowConfidence" : "failed",
-        action, contextName, url,
-        confidence: lowConfidence?.confidence,
-        strategy: lowConfidence?.strategy,
-        testName: currentTestName,
-      });
-      healLog.noValidCandidate(contextName);
-      throw new HealError(
-        lowConfidence
-          ? `Best match scored ${lowConfidence.confidence.toFixed(2)}, below the configured minConfidence of ${minConfidence}`
-          : "Could not find a matching element",
-        { action, contextName, url, candidatesAnalyzed, strategiesTried: pickResult.strategiesTried },
-      );
-    }
-
-    const choice = pickResult.choice;
-
-    if (mode === "warn") {
-      recordHealEvent({
-        outcome: "wouldHeal", action, contextName, url,
-        confidence: normalizeConfidence(choice.confidence),
-        strategy: choice.strategy,
-        testName: currentTestName,
-      });
-      healLog.wouldHeal(contextName, choice.strategy);
-      throw new HealError("Healing is in report-only mode (mode: 'warn'), so the locator was not replaced", {
-        action, contextName, url, candidatesAnalyzed, strategiesTried: pickResult.strategiesTried,
-      });
-    }
-
-    await saveToCache(key, choice.strategy, contextName);
-    await log({
-      ts: new Date().toISOString(), url, key, action, contextName,
-      used: "healed", success: true,
-      confidence: choice.confidence, why: choice.why, strategy: choice.strategy, tokenUsage,
+    return resolveHeal({
+      action,
+      aiAction: action,
+      contextName,
+      originalError: null,
+      forceClick: false,
+      warnMessage: WARN_NOT_REPLACED,
+      use: {
+        locate: async (loc) => {
+          if (await loc.count() !== 1) throw new Error("locator no longer resolves to one element");
+        },
+        act: async () => {},
+      },
     });
-    recordHealEvent({
-      outcome: "healed", action, contextName, url,
-      confidence: normalizeConfidence(choice.confidence),
-      strategy: choice.strategy,
-      testName: currentTestName,
-    });
-    healLog.healed(contextName, choice.strategy);
-    if (tokenUsage) healLog.tokenUsage(tokenUsage.inputTokens, tokenUsage.outputTokens, tokenUsage.totalTokens);
-
-    return buildLocator(page, choice.strategy);
   }
 
   // Heal methods
@@ -578,13 +622,11 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     check: (target, contextName) => healAction(
       "check", target, contextName,
       (loc) => loc.check({ timeout }),
-      { aiAction: "fill" } // Use fill candidates for check (inputs)
     ),
 
     uncheck: (target, contextName) => healAction(
       "uncheck", target, contextName,
       (loc) => loc.uncheck({ timeout }),
-      { aiAction: "fill" } // Use fill candidates for uncheck (inputs)
     ),
 
     hover: (target, contextName) => healAction(

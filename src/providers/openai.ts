@@ -3,18 +3,20 @@
  * Uses the official OpenAI SDK with structured outputs (responses API)
  */
 
-import OpenAI from "openai";
+import type OpenAI from "openai";
 import {
     AIProvider,
     AIProviderConfig,
     GenerateHealPlanInput,
     HealPlanResult,
     DEFAULT_MODELS,
+    PROVIDER_TIMEOUT_MS,
     cleanJson,
     isReasoningModel,
 } from "./types";
 import { HealPlan } from "../types";
 import { healLog } from "../logger";
+import { loadSdk } from "./load";
 
 /**
  * Build the request body. Kept separate from the call so the shape is testable
@@ -46,22 +48,35 @@ export function buildOpenAIRequest(input: GenerateHealPlanInput, model: string):
     return request;
 }
 
+/** Client options: a bounded request, with retries left to healwright. */
+export function openaiClientOptions(config: Pick<AIProviderConfig, "apiKey" | "baseURL">) {
+    return {
+        apiKey: config.apiKey,
+        timeout: PROVIDER_TIMEOUT_MS,
+        maxRetries: 0,
+        ...(config.baseURL ? { baseURL: config.baseURL } : {}),
+    };
+}
+
 export class OpenAIProvider implements AIProvider {
     readonly name = "openai" as const;
-    private client: OpenAI;
+    private client: Promise<OpenAI> | null = null;
     private model: string;
 
-    constructor(config: AIProviderConfig) {
-        this.client = new OpenAI({
-            apiKey: config.apiKey,
-            ...(config.baseURL ? { baseURL: config.baseURL } : {}),
-        });
+    constructor(private readonly config: AIProviderConfig) {
         this.model = config.model ?? DEFAULT_MODELS.openai;
+    }
+
+    private getClient(): Promise<OpenAI> {
+        this.client ??= loadSdk("openai", "OpenAI", () => import("openai"))
+            .then(({ default: OpenAI }) => new OpenAI(openaiClientOptions(this.config)));
+        return this.client;
     }
 
     async generateHealPlan(input: GenerateHealPlanInput): Promise<HealPlanResult> {
         try {
-            const resp = await this.client.responses.create(
+            const client = await this.getClient();
+            const resp = await client.responses.create(
                 buildOpenAIRequest(input, this.model) as any,
             ) as any;
 
