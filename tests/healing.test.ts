@@ -321,3 +321,59 @@ describe('grounding', () => {
     expect(calls.some(c => c.action === 'click' && c.selector === 'button.made-up')).toBe(true);
   });
 });
+
+describe('one pipeline for actions and getLocator', () => {
+  const readLog = async (file: string) =>
+    (await fs.readFile(file, 'utf8')).trim().split('\n').map(line => JSON.parse(line));
+
+  it('getLocator logs a failed heal to heal_events.jsonl', async () => {
+    const { page } = createFakePage();
+    const { provider } = createFakeProvider(planFor({ type: 'css', selector: '.nowhere' }));
+    const { cacheFile, reportFile } = paths();
+    const healPage = withHealing(page, { enabled: true, aiProvider: provider as any, cacheFile, reportFile });
+
+    await expect(healPage.heal.getLocator('.gone', 'Cart badge')).rejects.toThrow(HealError);
+
+    expect(await readLog(reportFile)).toEqual([expect.objectContaining({ success: false, contextName: 'Cart badge' })]);
+  });
+
+  it('getLocator logs a cache hit to heal_events.jsonl', async () => {
+    const { cacheFile, reportFile } = paths();
+    await fs.writeFile(cacheFile, JSON.stringify({
+      'locate::https://example.test/checkout::Cart badge': { type: 'role', role: 'status', name: 'Cart', context: 'Cart badge' },
+    }));
+    const { page } = createFakePage({ present: ['role=status[name=Cart]'] });
+    const healPage = withHealing(page, { enabled: true, cacheFile, reportFile });
+
+    await healPage.heal.getLocator('.gone', 'Cart badge');
+
+    expect(await readLog(reportFile)).toEqual([expect.objectContaining({ used: 'cache', success: true })]);
+  });
+
+  it('getLocator reports a provider failure as a HealError and counts it', async () => {
+    const { page } = createFakePage();
+    const provider = { name: 'openai' as const, generateHealPlan: vi.fn(async () => { throw new Error('network down'); }) };
+    const healPage = withHealing(page, { enabled: true, aiProvider: provider as any, ...paths() });
+
+    await expect(healPage.heal.getLocator('.gone', 'Cart badge')).rejects.toThrow(HealError);
+
+    expect(getHealSummary().failed).toBe(1);
+  });
+
+  it('does not re-heal when a cached element is found but the action fails', async () => {
+    const { cacheFile, reportFile } = paths();
+    await fs.writeFile(cacheFile, JSON.stringify({
+      'click::https://example.test/checkout::Buy button': { type: 'css', selector: 'button.buy', context: 'Buy button' },
+    }));
+    const { page } = createFakePage({
+      present: ['button.buy'],
+      actionErrors: { 'button.buy': 'locator.click: Timeout 5000ms exceeded.\n  - element is not enabled' },
+    });
+    const { provider } = createFakeProvider(planFor({ type: 'css', selector: 'button.buy' }));
+    const healPage = withHealing(page, { enabled: true, aiProvider: provider as any, cacheFile, reportFile });
+
+    await expect(healPage.heal.click('#gone', 'Buy button')).rejects.toThrow(/not enabled/);
+
+    expect(provider.generateHealPlan).not.toHaveBeenCalled();
+  });
+});
