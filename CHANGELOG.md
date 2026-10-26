@@ -5,6 +5,15 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- TypeSafe Jev provider (`AI_PROVIDER=typesafe` or `jev`, key in `TYPESAFE_API_KEY`). Jev chooses
+  which collected element matches the description, and whether it is on the page at all; healwright
+  builds the locator from that element's attributes, so the answer is always a real element. Its
+  probability is the heal's confidence.
+- `GenerateHealPlanInput.heal` passes the request as structured data to custom providers, alongside
+  the prompt.
+
 ### Fixed
 
 - `mode: 'warn'` no longer applies cached heals. A committed `healed_locators.json` made report-only

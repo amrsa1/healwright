@@ -1894,9 +1894,15 @@ h3 code {
   }
 }
 
+@media (max-width: 520px) {
+  .prov-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .prov-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   min-width: 0;
   margin: 0;
@@ -2361,6 +2367,13 @@ h3 code {
   .tabs-bar .tab {
     padding: 0 7px;
     font-size: 12px;
+  }
+
+  /* More tabs than fit: fade the edge so the row reads as scrollable. */
+  .tabs-bar {
+    padding-right: 24px;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
   }
 
   /* Icon-only on small screens; the word stays for screen readers. */

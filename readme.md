@@ -43,8 +43,8 @@ failing the build, and tells you exactly what it changed.
 - **Pays once.** Fixes are cached, so the model is called once per element, not once per run.
 - **Plain-English targets.** Leave the selector empty and describe the element instead.
 - **Honest in CI.** `minConfidence`, report-only mode and a run summary keep every heal visible.
-- **Any model.** OpenAI, Anthropic Claude, Google Gemini, or a local Ollama model where nothing
-  leaves your machine.
+- **Any model.** OpenAI, Anthropic Claude, Google Gemini, TypeSafe Jev, or a local Ollama model
+  where nothing leaves your machine.
 
 ## Quick start
 
@@ -62,7 +62,7 @@ before until you turn it on. Set these in CI, or in a `.env` file loaded with
 
 ```bash
 SELF_HEAL=1
-AI_PROVIDER=openai     # or anthropic, google, local
+AI_PROVIDER=openai     # or anthropic, google, typesafe, local
 AI_API_KEY=sk-...      # not needed for local (Ollama)
 ```
 
@@ -236,9 +236,24 @@ await healPage.heal.click('#buy-now', 'Place order button');
 | OpenAI (default) | `openai` or `gpt` | `AI_API_KEY` |
 | Anthropic Claude | `anthropic` or `claude` | `AI_API_KEY` |
 | Google Gemini | `google` or `gemini` | `AI_API_KEY` |
+| TypeSafe Jev | `typesafe` or `jev` | `TYPESAFE_API_KEY` (or `AI_API_KEY`) |
 | Ollama, local | `local` or `ollama` | Ollama running; no key |
 
 Each provider has a default model. Set `AI_MODEL` to choose your own.
+
+### TypeSafe Jev
+
+[Jev](https://docs.typesafe.ai/introduction) is a System One model: instead of writing text, it
+answers typed questions with calibrated probabilities, which makes it fast and very cheap. Healwright
+uses it differently from the chat models. It asks Jev which of the collected elements is the one you
+described, and whether that element is on the page at all, then builds the locator in code from the
+chosen element's own attributes. The answer can only ever be an element that was on the page, and
+its probability becomes the confidence that `minConfidence` checks.
+
+```bash
+AI_PROVIDER=typesafe
+TYPESAFE_API_KEY=...
+```
 
 ### Custom endpoints and your own provider
 
@@ -302,7 +317,7 @@ Pass these to `createHealingFixture()` or `withHealing(page, options)`.
 |--------|---------|-------------|
 | `enabled` | `SELF_HEAL=1` | Turns healing on |
 | `mode` | `'heal'` | `'heal'`, `'warn'` (report only) or `'off'` |
-| `provider` | `'openai'` | `openai`, `anthropic`, `google` or `local` |
+| `provider` | `'openai'` | `openai`, `anthropic`, `google`, `typesafe` or `local` |
 | `model` | Provider default | Overrides the model |
 | `apiKey` | `AI_API_KEY` | The provider's API key |
 | `baseURL` | `AI_BASE_URL` | Sends requests to another endpoint |
@@ -325,8 +340,9 @@ call on it.
 | Variable | What it does |
 |----------|-------------|
 | `SELF_HEAL` | Set to `1` to turn healing on |
-| `AI_PROVIDER` | `openai`/`gpt`, `anthropic`/`claude`, `google`/`gemini`, or `local`/`ollama` |
+| `AI_PROVIDER` | `openai`/`gpt`, `anthropic`/`claude`, `google`/`gemini`, `typesafe`/`jev`, or `local`/`ollama` |
 | `AI_API_KEY` | The provider's API key. Not needed for Ollama |
+| `TYPESAFE_API_KEY` | TypeSafe's API key, read before `AI_API_KEY` when the provider is TypeSafe |
 | `AI_MODEL` | Overrides the provider's default model |
 | `AI_BASE_URL` | Sends requests to another endpoint |
 | `OLLAMA_HOST` | Your Ollama server. Defaults to `http://127.0.0.1:11434` |

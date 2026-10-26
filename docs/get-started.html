@@ -117,6 +117,8 @@
                                     aria-selected="false" tabindex="-1" type="button">Anthropic</button>
                                 <button class="tab" role="tab" id="t-google" aria-controls="p-google"
                                     aria-selected="false" tabindex="-1" type="button">Gemini</button>
+                                <button class="tab" role="tab" id="t-typesafe" aria-controls="p-typesafe"
+                                    aria-selected="false" tabindex="-1" type="button">TypeSafe</button>
                                 <button class="tab" role="tab" id="t-local" aria-controls="p-local"
                                     aria-selected="false" tabindex="-1" type="button">Ollama</button>
                             </div>
@@ -139,6 +141,12 @@
 <span class="e-k">AI_PROVIDER</span>=<span class="e-v">google</span>
 <span class="e-k">AI_API_KEY</span>=<span class="e-v">…</span>
 <span class="tk-c"># AI_MODEL=…   optional, overrides the default model</span></code></pre>
+                        </div>
+                        <div role="tabpanel" id="p-typesafe" aria-labelledby="t-typesafe" hidden>
+<pre class="codeblock-pre"><code><span class="e-k">SELF_HEAL</span>=<span class="e-v">1</span>
+<span class="e-k">AI_PROVIDER</span>=<span class="e-v">typesafe</span>
+<span class="e-k">TYPESAFE_API_KEY</span>=<span class="e-v">…</span>
+<span class="tk-c"># Jev picks one of the collected elements; healwright builds the locator.</span></code></pre>
                         </div>
                         <div role="tabpanel" id="p-local" aria-labelledby="t-local" hidden>
 <pre class="codeblock-pre"><code><span class="e-k">SELF_HEAL</span>=<span class="e-v">1</span>
@@ -376,7 +384,7 @@
                             <tbody>
                                 <tr><td><code>enabled</code></td><td><code>SELF_HEAL=1</code></td><td>Turns healing on.</td></tr>
                                 <tr><td><code>mode</code></td><td><code>'heal'</code></td><td><code>'heal'</code>, <code>'warn'</code> (report only) or <code>'off'</code>.</td></tr>
-                                <tr><td><code>provider</code></td><td><code>'openai'</code></td><td><code>openai</code>, <code>anthropic</code>, <code>google</code> or <code>local</code>.</td></tr>
+                                <tr><td><code>provider</code></td><td><code>'openai'</code></td><td><code>openai</code>, <code>anthropic</code>, <code>google</code>, <code>typesafe</code> or <code>local</code>.</td></tr>
                                 <tr><td><code>model</code></td><td>Provider default</td><td>Overrides the model.</td></tr>
                                 <tr><td><code>apiKey</code></td><td><code>AI_API_KEY</code></td><td>The provider's API key.</td></tr>
                                 <tr><td><code>baseURL</code></td><td><code>AI_BASE_URL</code></td><td>Sends requests to another endpoint, such as a gateway.</td></tr>
@@ -404,8 +412,9 @@
                             </thead>
                             <tbody>
                                 <tr><td><code>SELF_HEAL</code></td><td>Set to <code>1</code> to turn healing on.</td></tr>
-                                <tr><td><code>AI_PROVIDER</code></td><td><code>openai</code>/<code>gpt</code>, <code>anthropic</code>/<code>claude</code>, <code>google</code>/<code>gemini</code>, or <code>local</code>/<code>ollama</code>.</td></tr>
+                                <tr><td><code>AI_PROVIDER</code></td><td><code>openai</code>/<code>gpt</code>, <code>anthropic</code>/<code>claude</code>, <code>google</code>/<code>gemini</code>, <code>typesafe</code>/<code>jev</code>, or <code>local</code>/<code>ollama</code>.</td></tr>
                                 <tr><td><code>AI_API_KEY</code></td><td>The provider's API key. Not needed for Ollama.</td></tr>
+                                <tr><td><code>TYPESAFE_API_KEY</code></td><td>TypeSafe's key, read before <code>AI_API_KEY</code> when the provider is TypeSafe.</td></tr>
                                 <tr><td><code>AI_MODEL</code></td><td>Overrides the provider's default model.</td></tr>
                                 <tr><td><code>AI_BASE_URL</code></td><td>Sends requests to another endpoint.</td></tr>
                                 <tr><td><code>OLLAMA_HOST</code></td><td>Your Ollama server. Defaults to <code>http://127.0.0.1:11434</code>.</td></tr>
