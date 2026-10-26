@@ -35,6 +35,7 @@ import {
   isWrongElementError,
   collectCandidates,
   rankCandidates,
+  isShownCandidate,
   readJson,
   updateJson,
   appendLog,
@@ -149,6 +150,8 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
     plan: import("./types").HealPlanT | null;
     candidatesAnalyzed: number;
     tokenUsage: TokenUsage | null;
+    /** DOM indices of the elements the model was shown. */
+    shown: number[];
   }
 
   async function askAI(action: Action, contextName: string): Promise<AskAIResult> {
@@ -172,7 +175,8 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
       1000,
     );
 
-    return { plan: result.plan, candidatesAnalyzed: candidates.length, tokenUsage: result.tokenUsage };
+    const shown = candidates.map(c => allCandidates.indexOf(c));
+    return { plan: result.plan, candidatesAnalyzed: candidates.length, tokenUsage: result.tokenUsage, shown };
   }
 
   interface PickResult {
@@ -184,6 +188,8 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
 
   interface PickValidOptions {
     skipVisibilityCheck?: boolean;
+    /** Elements the model was shown; a strategy resolving elsewhere is rejected. */
+    shown?: number[];
   }
 
   async function pickValid(plan: ReturnType<typeof HealPlan.parse>, options?: PickValidOptions): Promise<PickResult> {
@@ -216,6 +222,15 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
             strategiesTried.push({ type: c.strategy.type, reason: "element exists but not visible" });
             continue;
           }
+        }
+
+        // A strategy the model made up can still match some other element.
+        // Only accept elements it was actually shown.
+        if (options?.shown && await isShownCandidate(loc, options.shown) === false) {
+          const reason = "not one of the elements shown to the model";
+          healLog.candidateRejected(c.strategy.type, reason);
+          strategiesTried.push({ type: c.strategy.type, reason });
+          continue;
         }
 
         // The element resolves — but a low-confidence match is exactly the case
@@ -403,7 +418,7 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
         });
       }
 
-      const pickResult = await pickValid(aiResult.plan, { skipVisibilityCheck: options?.forceClick });
+      const pickResult = await pickValid(aiResult.plan, { skipVisibilityCheck: options?.forceClick, shown: aiResult.shown });
       strategiesTried = pickResult.strategiesTried;
       const choice = pickResult.choice;
 
@@ -557,9 +572,9 @@ export function withHealing(page: Page, opts?: HealOptions): HealPage {
       healLog.cacheMiss(contextName);
     }
 
-    const { plan, candidatesAnalyzed, tokenUsage } = await askAI(action, contextName);
+    const { plan, candidatesAnalyzed, tokenUsage, shown } = await askAI(action, contextName);
     const pickResult = plan
-      ? await pickValid(plan)
+      ? await pickValid(plan, { shown })
       : { choice: null, strategiesTried: [], rejectedForConfidence: null };
 
     if (!pickResult.choice) {

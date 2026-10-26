@@ -291,3 +291,33 @@ describe('when healing starts', () => {
     expect(provider.generateHealPlan).not.toHaveBeenCalled();
   });
 });
+
+describe('grounding', () => {
+  const twoStrategies = {
+    candidates: [
+      { strategy: { type: 'css', selector: 'button.made-up' }, confidence: 0.9, why: 'guess' },
+      { strategy: { type: 'label', text: 'Email' }, confidence: 0.8, why: 'label matches' },
+    ],
+  };
+
+  it('rejects a strategy that resolves to an element the model was never shown', async () => {
+    const { page, calls } = createFakePage({ present: ['button.made-up', 'label=Email'], notShown: ['button.made-up'] });
+    const { provider } = createFakeProvider(twoStrategies);
+    const healPage = withHealing(page, { enabled: true, aiProvider: provider as any, ...paths() });
+
+    await healPage.heal.fill('#gone', 'Email field', 'a@b.c');
+
+    expect(calls.some(c => c.action === 'fill' && c.selector === 'button.made-up')).toBe(false);
+    expect(calls.some(c => c.action === 'fill' && c.selector === 'label=Email')).toBe(true);
+  });
+
+  it('accepts a strategy when the page can no longer be checked', async () => {
+    const { page, calls } = createFakePage({ present: ['button.made-up'], notShown: ['button.made-up'], unverifiable: true });
+    const { provider } = createFakeProvider(planFor({ type: 'css', selector: 'button.made-up' }));
+    const healPage = withHealing(page, { enabled: true, aiProvider: provider as any, ...paths() });
+
+    await healPage.heal.click('#gone', 'Save button');
+
+    expect(calls.some(c => c.action === 'click' && c.selector === 'button.made-up')).toBe(true);
+  });
+});

@@ -204,7 +204,21 @@ export async function collectCandidates(page: Page, action: Action, limit = CAND
   const selector = candidateSelector(action);
 
   return page.evaluate(({ selector, limit }) => {
-    const els = Array.from(document.querySelectorAll(selector)).slice(0, limit);
+    // Walk open shadow roots too: web components (Lit, Shoelace, Salesforce
+    // LWC) keep their controls there, and Playwright's locators reach them.
+    // Shadow content is visited where its host appears, in document order.
+    const els: Element[] = [];
+    const visit = (root: Document | ShadowRoot) => {
+      for (const el of Array.from(root.querySelectorAll("*"))) {
+        if (els.length >= limit) return;
+        if (el.matches(selector)) els.push(el);
+        if (el.shadowRoot) visit(el.shadowRoot);
+      }
+    };
+    visit(document);
+    // Kept on the page (under a symbol, nothing added to the DOM) so a healed
+    // locator can be checked against the elements the model was shown.
+    (window as any)[Symbol.for("healwright.candidates")] = els;
     
     const pickTest = (el: Element) => {
       for (const a of ["data-testid", "data-test", "data-test-id", "data-qa", "data-cy"]) {
@@ -261,6 +275,19 @@ export async function collectCandidates(page: Page, action: Action, limit = CAND
     }
     return result;
   }, { selector, limit });
+}
+
+/**
+ * True when `loc` resolves to one of the collected elements at `indices`, or
+ * to something inside one (a <span> in a button). Null when the page no longer
+ * holds the collected list, for example after a navigation.
+ */
+export async function isShownCandidate(loc: Locator, indices: number[]): Promise<boolean | null> {
+  return loc.evaluate((el, idx) => {
+    const collected = (window as any)[Symbol.for("healwright.candidates")] as Element[] | undefined;
+    if (!collected) return null;
+    return idx.some(i => collected[i] === el || Boolean(collected[i]?.contains(el)));
+  }, indices);
 }
 
 /**

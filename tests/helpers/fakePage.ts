@@ -18,6 +18,10 @@ export function createFakePage(opts: {
   hidden?: string[];
   /** Actions on these selectors throw the given message, as Playwright would. */
   actionErrors?: Record<string, string>;
+  /** Selectors that resolve to an element the model was never shown. */
+  notShown?: string[];
+  /** The page lost the collected list (it navigated), so nothing can be verified. */
+  unverifiable?: boolean;
   candidates?: Record<string, unknown>[];
 } = {}) {
   const url = opts.url ?? 'https://example.test/checkout';
@@ -39,6 +43,8 @@ export function createFakePage(opts: {
       count: vi.fn(async () => (inDom ? 1 : 0)),
       isVisible: vi.fn(async () => exists),
       first: vi.fn(() => locator),
+      // Answers "is this one of the collected elements?" for the grounding check.
+      evaluate: vi.fn(async () => (opts.unverifiable ? null : !(opts.notShown ?? []).includes(selector))),
       waitFor: vi.fn(async ({ timeout, state }: { timeout?: number; state?: string } = {}) => {
         calls.push({ action: `waitFor:${timeout}`, selector });
         const ok = state === 'attached' ? inDom : exists;
